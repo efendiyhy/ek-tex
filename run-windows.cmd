@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title LaTeXStudio Local - SERVER (Ctrl+C = Stop)
+title EK TeX - SERVER (Ctrl+C = Stop)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0run-windows.ps1"
 set "exitcode=%errorlevel%"
 echo.

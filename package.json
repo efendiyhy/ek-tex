@@ -1,12 +1,12 @@
 {
   "name": "latexstudio-local",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
-  "description": "LaTeXStudio Local by EK Instrumentation - browser-based LaTeX editor and PDF preview",
+  "description": "EK TeX by EK Instrumentation - browser-based LaTeX editor and PDF preview",
   "engines": { "node": ">=18" },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/smoke.js",
+    "test": "node tests/smoke.js && node tests/installer-static.js",
     "verify-latex": "node scripts/verify-compiler.js"
   }
 }

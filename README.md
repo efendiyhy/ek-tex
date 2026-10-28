@@ -1,94 +1,79 @@
-# LaTeXStudio Local v2.1
+# EK TeX
 
-**Local LaTeX editor** seperti alur kerja Overleaf: dashboard proyek → editor `.tex` → kompilasi PDF dan preview, dengan file manager dan referensi DOI. Semua proyek disimpan lokal di folder `workspace/`. Aplikasi tidak terafiliasi dengan Overleaf atau OpenAI Prism.
+**Editor LaTeX lokal untuk penelitian dan penulisan ilmiah.**  
+Dikembangkan oleh **EK Instrumentation**.
 
-![Dashboard LaTeXStudio](docs/dashboard.png)
+![EK TeX — logo kucing](public/cat-logo.svg)
 
-## Windows — cara termudah
+EK TeX menyediakan pengelolaan proyek, editor LaTeX multi-file, kompilasi PDF, pratinjau dokumen, serta referensi bibliografi dalam satu aplikasi berbasis web yang berjalan di komputer sendiri.
 
-1. Klik **Code → Download ZIP** di halaman repo GitHub.
-2. Ekstrak file ZIP ke direktori **yang permanen** (mis. `C:\LaTeXStudio`). Jangan jalankan langsung dari ZIP atau folder Downloads yang nantinya akan dipindah/hapus.
-3. Klik **`install-windows.bat`**. Saat diminta, setujui pemasangan komponen yang belum tersedia via WinGet: **Node.js LTS, MiKTeX, Strawberry Perl, latexmk**. Instalasi pertama **memerlukan internet, WinGet (App Installer), ruang disk, dan mungkin izin administrator**.
-4. Installer memverifikasi kompilasi PDF dan membuat shortcut **LaTeXStudio Local** di **Desktop** dan **Start Menu**.
-5. Klik shortcut. Browser membuka `http://127.0.0.1:3457`, dan **terminal server tetap terbuka**.
-6. Untuk stop: di terminal tekan **Ctrl+C** (jika Windows bertanya *Terminate batch job (Y/N)?*, pilih **Y**), atau tutup terminal. Jika proses berakhir, terminal menampilkan hasilnya lalu bisa ditutup.
+## Fitur
 
-**Penting:** Jika lokasi folder aplikasi dipindah, shortcut lama tidak valid. Jalankan `install-windows.bat` lagi dari lokasi baru untuk memperbarui shortcut.
+- **Dashboard proyek:** buat, impor, pilih, dan kelola proyek sebelum membuka editor.
+- **Editor LaTeX:** syntax highlighting, multi-file `.tex`/`.bib`, autosave, dan backup lokal.
+- **Kompilasi PDF:** pdfLaTeX, XeLaTeX, LuaLaTeX melalui `latexmk`, dengan preview dan ekspor hasil.
+- **Referensi online:** cari metadata publikasi melalui Crossref dan tambahkan sitasi berdasarkan DOI.
+- **Tampilan fleksibel:** sidebar dapat disembunyikan menggunakan tombol atau `Ctrl+B`.
+- **Impor/ekspor:** pindahkan proyek dalam format ZIP.
 
-### Instalasi langsung dari GitHub (tanpa menginstal Git)
+## Instalasi Windows
 
-Untuk **repository PUBLIC** yang sudah Anda push, buka **Windows PowerShell** pada laptop lain dan jalankan (ganti `USERNAME/LaTeXStudio-Local` dengan repo Anda):
+**Cara 1 — Unduh dari GitHub**
 
-```powershell
-$repo = 'USERNAME/LaTeXStudio-Local'
-$installer = Join-Path $env:TEMP 'install-latexstudio.ps1'
-Invoke-WebRequest "https://raw.githubusercontent.com/$repo/main/install-from-github.ps1" -OutFile $installer
-powershell -NoProfile -ExecutionPolicy Bypass -File $installer -Repository $repo
-```
+1. Buka [repository EK TeX](https://github.com/efendiyhy/ek-tex).
+2. Klik **Code → Download ZIP**, lalu ekstrak ZIP.
+3. Klik dua kali **`install-windows.bat`** di dalam folder hasil ekstraksi.
+4. Installer otomatis menempatkan aplikasi di **Documents\EK-TeX**, memasang dependensi yang diperlukan, dan membuat shortcut **EK TeX** di Desktop serta Start Menu.
 
-Script mengunduh arsip branch `main` dari GitHub, mengekstrak kode ke `%LOCALAPPDATA%\Programs\LaTeXStudioLocal`, menjalankan installer dependensi, kemudian membuat shortcut. **Tidak perlu Git**. Untuk repo private atau jaringan yang memblokir GitHub, gunakan ZIP manual. Anda dianjurkan membaca script sebelum menjalankannya karena ia mengunduh dan menginstal aplikasi.
+**Cara 2 — Instal langsung melalui PowerShell**
 
-**Update di laptop yang telah diinstal melalui GitHub:** tutup terminal server, lalu klik `update-windows.cmd` di folder aplikasi. Script mengambil source terbaru dan **tidak menghapus `workspace/`**. Shortcut tetap berfungsi. Jika instalasi lama dari ZIP, update manual bisa dilakukan dengan ekstraksi versi baru dan memindahkan `workspace/` secara aman.
-
-> Installer tidak membuat Windows Service, scheduled task, atau autostart. Server hanya hidup selama terminal aplikasi berjalan dan hanya listen di `127.0.0.1` (bukan akses publik LAN).
-
-## Push pertama ke GitHub
-
-Lihat panduan lengkap **[PUSH-KE-GITHUB.md](PUSH-KE-GITHUB.md)**. Ringkasnya, setelah membuat repository baru **kosong** di GitHub:
+Jalankan di Windows PowerShell:
 
 ```powershell
-cd C:\LaTeXStudio
-
-git init
-git add .
-git commit -m "LaTeXStudio Local v2.1 - installer and shortcuts"
-git branch -M main
-git remote add origin https://github.com/USERNAME/LaTeXStudio-Local.git
-git push -u origin main
+$setup = Join-Path $env:TEMP 'ek-tex-install.ps1'
+Invoke-WebRequest 'https://raw.githubusercontent.com/efendiyhy/ek-tex/main/install-from-github.ps1' -OutFile $setup
+powershell -NoProfile -ExecutionPolicy Bypass -File $setup
 ```
 
-**Jangan push isi folder `workspace/`** (proyek pribadi), `.latexstudio-build`, log dan data instalasi. `.gitignore` sudah disertakan. Pastikan GitHub repo bukan berisi data privat sebelum dijadikan public.
+Tidak perlu mengisi username repository atau memilih folder instalasi. Lokasi Documents mengikuti pengaturan Windows, termasuk Documents yang diarahkan ke OneDrive.
 
-## Fitur utama
+> **Prasyarat:** Windows dengan WinGet/App Installer, internet pada instalasi pertama, ruang disk yang memadai, dan izin instalasi perangkat lunak bila diminta. Installer menyiapkan Node.js, MiKTeX, Strawberry Perl, serta `latexmk`. Paket distribusi LaTeX tidak disertakan di dalam repository.
 
-- Dashboard daftar proyek → klik salah satu proyek untuk masuk editor.
-- Editor syntax highlight dan multi-file `.tex`, `.bib`, `.sty`, `.cls` serta upload gambar.
-- Compile pdfLaTeX, XeLaTeX, LuaLaTeX melalui `latexmk`; preview dan unduh PDF.
-- Sidebar dapat disembunyikan dengan tombol atau **Ctrl+B**.
-- Cari literatur di Crossref, impor DOI ke `.bib` dan perbarui metadata DOI online.
-- Autosave, backup lokal, import/export proyek ZIP.
-- **Ctrl+S** untuk save, **Ctrl+Enter** untuk compile.
+## Menjalankan dan menghentikan
 
-## Linux Ubuntu / Debian / Armbian
+Buka shortcut **EK TeX** di Desktop atau Start Menu. Browser akan membuka `http://127.0.0.1:3457`. Server dijalankan pada **jendela terminal yang tetap terlihat**.
+
+Untuk menghentikan server, tekan **Ctrl+C** di terminal atau tutup terminal. Menutup tab browser saja tidak menghentikan server.
+
+## Lokasi proyek dan pembaruan
+
+Dokumen disimpan di **Documents\EK-TeX\workspace**. Folder ini **tidak ditimpa atau dihapus** selama instalasi ulang atau update. Proyek dari instalasi GitHub versi lama di `%LOCALAPPDATA%\Programs\LaTeXStudioLocal\workspace` akan disalin bila belum tersedia di lokasi baru; file aslinya tetap disimpan.
+
+Untuk memperbarui aplikasi dari GitHub, hentikan server lalu jalankan **`update-windows.cmd`** di folder `Documents\EK-TeX`. Shortcut tidak perlu dibuat ulang secara manual.
+
+Backup proyek penting tetap disarankan sebelum pembaruan sistem atau perangkat.
+
+## Linux (Ubuntu, Debian, Armbian)
 
 ```bash
-chmod +x start-linux.sh setup-linux.sh
+chmod +x setup-linux.sh start-linux.sh
 ./start-linux.sh
 ```
 
-Launcher memasang Node.js, TeX Live, `latexmk` jika belum tersedia (menggunakan `apt` dan mungkin `sudo`), menguji compiler, lalu menjalankan server. Proyek tetap disimpan di `workspace/`. Shortcut Desktop otomatis saat ini khusus Windows.
+Launcher Linux menyiapkan dependensi menggunakan `apt` bila diperlukan. Fitur shortcut otomatis ke Documents saat ini khusus Windows.
 
-## Persyaratan dan catatan
+## Informasi teknis
 
-- **Node.js 18+**, versi 20/22 LTS direkomendasikan. Tidak ada dependensi npm eksternal.
-- Kompilasi PDF membutuhkan distribusi LaTeX dan `latexmk`. Paket berukuran besar **tidak dibundel** dalam GitHub repo.
-- Instalasi pertama memakai internet; pengeditan dan kompilasi yang sudah terpasang bisa berjalan offline. Pencarian DOI/paket LaTeX baru tetap membutuhkan internet.
-- Source LaTeX yang tidak tepercaya berisiko. Backend menggunakan `-no-shell-escape` dan bind localhost saja, tetapi jangan membuka proyek asing tanpa pemeriksaan.
-- Untuk kode editor dan server, jalankan `npm test` (smoke test Node.js). Untuk uji compiler jalankan `npm run verify-latex`.
-- Setup WinGet dan shortcut **belum dieksekusi pada Windows** di lingkungan pengujian ini; uji pada laptop Windows sebelum menyebarkan secara luas.
+- Berjalan secara lokal pada `127.0.0.1` dan tidak membuat Windows Service atau autostart.
+- Memerlukan Node.js 18+; Node.js LTS direkomendasikan. Tidak memerlukan database atau dependensi npm eksternal.
+- Kompilasi LaTeX membutuhkan instalasi TeX yang berfungsi. Unduhan paket MiKTeX baru dan pencarian DOI memerlukan internet.
+- Jangan membuka dokumen LaTeX dari sumber tidak tepercaya tanpa pemeriksaan.
+- Pengujian kode: `npm test`. Pengujian compiler: `npm run verify-latex`.
+- Installer WinGet dan shortcut Windows perlu diuji pada Windows; pengujian di lingkungan Linux tidak menggantikan pengujian instalasi Windows.
 
-## Struktur file
+Untuk petunjuk troubleshooting dan instalasi tambahan, baca [Panduan instalasi](INSTALL-DI-LAPTOP-LAIN.md).
 
-| File / Folder | Fungsi |
-|---|---|
-| `server.js`, `public/` | Backend dan antarmuka editor |
-| `workspace/` | **Dokumen pengguna**, tidak dipush ke GitHub |
-| `install-windows.bat` / `.ps1` | Instal dependensi + shortcut Desktop dan Start Menu |
-| `run-windows.cmd` / `.ps1` | Menjalankan server di **terminal yang terlihat** |
-| `install-from-github.ps1` | Install/update lewat GitHub tanpa Git |
-| `update-windows.cmd` | Update instalasi GitHub dengan menjaga workspace |
-| `start-windows.bat` | Launcher lama yang memeriksa dependensi dulu |
-| `setup-windows.ps1` | WinGet, MiKTeX, Perl, latexmk, uji compiler |
-| `tests/smoke.js` | Pengujian API terisolasi |
+---
 
-Lihat pula [INSTALL-DI-LAPTOP-LAIN.md](INSTALL-DI-LAPTOP-LAIN.md) untuk langkah instalasi, mengatasi masalah PATH/WinGet, dan cara backup data.
+**EK TeX** · Developed by **EK Instrumentation**  
+Source code: [github.com/efendiyhy/ek-tex](https://github.com/efendiyhy/ek-tex)

@@ -1,9 +1,8 @@
-# Install or update LaTeXStudio on another Windows laptop from a PUBLIC GitHub repo.
-# Example:
-#   powershell -NoProfile -ExecutionPolicy Bypass -File .\install-from-github.ps1 -Repository 'OWNER/REPO'
-# Does not require Git. Downloads a GitHub branch ZIP, retains existing workspace/.
+# EK TeX - one-step installer and updater from the official public GitHub repository.
+# Default install location: the user's Documents\EK-TeX (supports redirected Documents).
+# NEVER overwrites or deletes workspace/.
 param(
-    [string]$Repository = '',
+    [string]$Repository = 'efendiyhy/ek-tex',
     [string]$Branch = 'main',
     [string]$InstallDir = '',
     [switch]$NoLaunch,
@@ -14,85 +13,53 @@ $ProgressPreference = 'SilentlyContinue'
 $temporary = $null
 try {
     if (-not $InstallDir) {
-        $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\LaTeXStudioLocal'
+        $documents = [Environment]::GetFolderPath('MyDocuments')
+        if ([string]::IsNullOrWhiteSpace($documents) -or -not (Test-Path -LiteralPath $documents)) {
+            throw 'Folder Documents Windows tidak ditemukan.'
+        }
+        $InstallDir = Join-Path $documents 'EK-TeX'
     }
     $InstallDir = [IO.Path]::GetFullPath($InstallDir)
     $configPath = Join-Path $InstallDir '.latexstudio-install.json'
-    if (-not $Repository -and (Test-Path -LiteralPath $configPath)) {
-        $existing = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
-        $Repository = [string]$existing.repository
-        if ($existing.branch) { $Branch = [string]$existing.branch }
-    }
     if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' -or $Repository.Contains('..')) {
-        throw 'Gunakan -Repository OWNER/REPO, contoh -Repository organisasi/LaTeXStudio-Local. Repo harus PUBLIC.'
+        throw 'Format repository tidak valid.'
     }
     if ($Branch -notmatch '^[A-Za-z0-9][A-Za-z0-9._/-]*$' -or $Branch.Contains('..')) {
-        throw 'Nama branch tidak valid.'
+        throw 'Format branch tidak valid.'
     }
-    if (Test-Path -LiteralPath $InstallDir) {
-        Write-Host '[INFO] Jika aplikasi berjalan, hentikan dahulu (Ctrl+C) sebelum update.' -ForegroundColor Yellow
-    }
-    Write-Host ('[GitHub] Repository : ' + $Repository) -ForegroundColor Cyan
-    Write-Host ('[GitHub] Branch     : ' + $Branch)
-    Write-Host ('[GitHub] Install ke : ' + $InstallDir)
-    Write-Host '[INFO] Dokumen di workspace/ akan tetap dipertahankan.'
+    Write-Host ('[EK TeX] Repository: https://github.com/' + $Repository) -ForegroundColor Cyan
+    Write-Host ('[EK TeX] Instalasi : ' + $InstallDir)
+    Write-Host '[INFO] Dokumen dan proyek lokal tetap tersimpan di workspace/.'
 
-    $temporary = Join-Path ([IO.Path]::GetTempPath()) ('latexstudio-github-' + [guid]::NewGuid().ToString('N'))
+    $temporary = Join-Path ([IO.Path]::GetTempPath()) ('ek-tex-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $temporary -Force | Out-Null
     $zip = Join-Path $temporary 'source.zip'
     $unpacked = Join-Path $temporary 'unpacked'
     $uri = 'https://github.com/' + $Repository + '/archive/refs/heads/' + $Branch + '.zip'
-    Write-Host ('[GitHub] Download source: ' + $uri)
     Invoke-WebRequest -Uri $uri -OutFile $zip -UseBasicParsing -MaximumRedirection 5
     Expand-Archive -LiteralPath $zip -DestinationPath $unpacked -Force
     $directories = @(Get-ChildItem -LiteralPath $unpacked -Directory)
-    if ($directories.Count -ne 1) { throw 'Format arsip GitHub tidak sesuai.' }
-    $src = $directories[0].FullName
-    if (-not (Test-Path -LiteralPath (Join-Path $src 'server.js')) -or
-        -not (Test-Path -LiteralPath (Join-Path $src 'install-windows.ps1'))) {
-        throw 'Repo tidak berisi LaTeXStudio Local atau branch yang dipilih salah.'
+    if ($directories.Count -ne 1) { throw 'Arsip source tidak sesuai.' }
+    $source = $directories[0].FullName
+    if (-not (Test-Path -LiteralPath (Join-Path $source 'scripts\copy-app.ps1'))) {
+        throw 'Installer repository belum diperbarui. Pastikan EK TeX versi 2.3 sudah di-push.'
     }
+    . (Join-Path $source 'scripts\copy-app.ps1')
+    Copy-EKTexApp -SourceDir $source -TargetDir $InstallDir
+    Copy-EKTexLegacyProjects -TargetDir $InstallDir
+    @{ repository=$Repository; branch=$Branch; installed_at=(Get-Date).ToString('o') } |
+        ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
 
-    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    # Whitelist only application files. Never copy/overwrite the user's workspace.
-    $managedFiles = @(
-        'server.js', 'package.json', 'README.md',
-        'install-windows.ps1', 'install-windows.bat',
-        'start-windows.bat', 'setup-windows.ps1',
-        'run-windows.ps1', 'run-windows.cmd',
-        'install-from-github.ps1', 'update-windows.cmd',
-        'setup-linux.sh', 'start-linux.sh'
-    )
-    foreach ($file in $managedFiles) {
-        $from = Join-Path $src $file
-        if (Test-Path -LiteralPath $from) {
-            Copy-Item -LiteralPath $from -Destination (Join-Path $InstallDir $file) -Force
-        }
-    }
-    foreach ($folder in @('public', 'scripts', 'assets', 'tests', 'docs')) {
-        $from = Join-Path $src $folder
-        if (Test-Path -LiteralPath $from) {
-            $dest = Join-Path $InstallDir $folder
-            New-Item -ItemType Directory -Path $dest -Force | Out-Null
-            Copy-Item -Path (Join-Path $from '*') -Destination $dest -Recurse -Force
-        }
-    }
-    $config = @{repository=$Repository; branch=$Branch; installed_at=(Get-Date).ToString('o')}
-    $config | ConvertTo-Json | Set-Content -LiteralPath $configPath -Encoding UTF8
-
-    Write-Host '[OK] Source aplikasi siap. Memasang dependensi + membuat shortcut...' -ForegroundColor Green
-    $installer = Join-Path $InstallDir 'install-windows.ps1'
-    $installerArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $installer)
-    if ($NoLaunch) { $installerArgs += '-NoLaunch' }
-    if ($NoPrompt) { $installerArgs += '-NoPrompt' }
-    & powershell.exe @installerArgs
-    if ($LASTEXITCODE -ne 0) { throw 'Instalasi dependensi/shortcut belum berhasil. Buka install-windows.bat pada folder aplikasi untuk mengulang.' }
-    Write-Host ('[OK] LaTeXStudio siap di ' + $InstallDir) -ForegroundColor Green
-    Write-Host '[OK] Shortcut: Desktop dan Start Menu.'
+    $params = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                (Join-Path $InstallDir 'install-windows.ps1'), '-Installed')
+    if ($NoLaunch) { $params += '-NoLaunch' }
+    if ($NoPrompt) { $params += '-NoPrompt' }
+    & powershell.exe @params
+    if ($LASTEXITCODE -ne 0) { throw 'Pemasangan dependensi atau shortcut gagal. Jalankan install-windows.bat dari folder Documents\EK-TeX.' }
+    Write-Host ('[OK] EK TeX siap di ' + $InstallDir) -ForegroundColor Green
     exit 0
 } catch {
     Write-Host ('[ERROR] ' + $_.Exception.Message) -ForegroundColor Red
-    Write-Host '[INFO] Jika repo private, unduh ZIP secara manual dengan akun GitHub lalu jalankan install-windows.bat.' -ForegroundColor Yellow
     exit 1
 } finally {
     if ($temporary -and (Test-Path -LiteralPath $temporary)) {

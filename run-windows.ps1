@@ -32,7 +32,7 @@ $port = if ($env:PORT) { $env:PORT } else { '3457' }
 $url = 'http://127.0.0.1:' + $port
 Write-Host ''
 Write-Host '======================================================' -ForegroundColor Cyan
-Write-Host ' LaTeXStudio Local 2.1  |  Web LaTeX Editor' -ForegroundColor Cyan
+Write-Host ' EK TeX 2.3 | By EK Instrumentation' -ForegroundColor Cyan
 Write-Host '======================================================' -ForegroundColor Cyan
 Write-Host (' URL       : ' + $url)
 Write-Host (' Workspace : ' + (Join-Path $PSScriptRoot 'workspace'))
