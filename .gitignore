@@ -1,0 +1,39 @@
+# Private user projects: DO NOT push your papers, bibliography or build output.
+/workspace/*
+!/workspace/.gitkeep
+
+# Local installation metadata
+/.latexstudio-install.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.lnk
+
+# Node (none required by default)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Temporary/build output, including outside workspace
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdv
+.latexstudio-build/
+.latexstudio-backups/
+
+# Downloads and archives
+*.zip
+*.tmp

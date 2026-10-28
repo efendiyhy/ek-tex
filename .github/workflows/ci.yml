@@ -1,0 +1,23 @@
+name: LaTeXStudio CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  node-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check syntax
+        run: |
+          node --check server.js
+          node --check public/app.js
+          node --check scripts/verify-compiler.js
+          node --check tests/smoke.js
+      - name: Run local API smoke test
+        run: npm test
