@@ -8,6 +8,7 @@ const zlib = require('zlib');
 const os = require('os');
 const crypto = require('crypto');
 const {spawn, spawnSync} = require('child_process');
+const {prepareIncludeAuxDirectories} = require('./lib/latex-build-dirs');
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
 const WORKSPACE = path.join(ROOT, 'workspace');
@@ -137,6 +138,14 @@ function stopBuildJob(job,reason){
 }
 function compileAttempt(job,dir,engine,main){return new Promise(resolve=>{
  const out=path.join(dir,'.latexstudio-build');
+ // Prepare nested .aux paths before EACH attempt, including clean and stale-cache retries.
+ try {
+  const prepared=prepareIncludeAuxDirectories(dir,main,out);
+  if(prepared.folders.length)appendBuildLog(job,'[EK TeX] Folder AUX untuk \\include siap: '+prepared.folders.join(', ')+'\n');
+ } catch (error) {
+  appendBuildLog(job,'[EK TeX] Gagal menyiapkan folder AUX: '+error.message+'\n');
+  return resolve(-1);
+ }
  const args=['-'+({pdf:'pdf',xelatex:'xelatex',lualatex:'lualatex'}[engine]||'pdf'),'-interaction=nonstopmode','-file-line-error','-halt-on-error','-no-shell-escape','-outdir='+out,'-cd',main];
  let child,spawnError='';
  try{child=spawn('latexmk',args,{cwd:dir,shell:false,windowsHide:true,detached:process.platform!=='win32',env:{...process.env,max_print_line:'1200'}})}

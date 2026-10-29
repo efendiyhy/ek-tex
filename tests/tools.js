@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..'),temp=fs.mkdtempSync(path.join(os.tmpdir(
 const app=path.join(temp,'app'),bin=path.join(temp,'bin');fs.mkdirSync(app);fs.mkdirSync(bin);
 fs.copyFileSync(path.join(root,'server.js'),path.join(app,'server.js'));
 fs.cpSync(path.join(root,'public'),path.join(app,'public'),{recursive:true});
+fs.cpSync(path.join(root,'lib'),path.join(app,'lib'),{recursive:true});
 const hermesStub=path.join(bin,'hermes');fs.writeFileSync(hermesStub,`#!/bin/sh
 if [ "$1" = "--version" ]; then echo "hermes-test-1"; exit 0; fi
 printf '%s\\n' '{"explanation":"Tambahkan percent comment","find":"TEST_HERMES_TOKEN","replace":"% TEST_HERMES_TOKEN"}'

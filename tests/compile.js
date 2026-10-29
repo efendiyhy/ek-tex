@@ -10,6 +10,7 @@ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'ek-tex-compile-test-'));
 const dest=path.join(tmp,'app'),bin=path.join(tmp,'bin');fs.mkdirSync(dest);fs.mkdirSync(bin);
 fs.copyFileSync(path.join(root,'server.js'),path.join(dest,'server.js'));
 fs.cpSync(path.join(root,'public'),path.join(dest,'public'),{recursive:true});
+fs.cpSync(path.join(root,'lib'),path.join(dest,'lib'),{recursive:true});
 const compiler=path.join(bin,'latexmk');
 fs.writeFileSync(compiler,`#!/usr/bin/env node
 const fs=require('fs'),path=require('path');
@@ -17,6 +18,7 @@ if(process.argv.includes('-version')){console.log('Latexmk mock 4.83');process.e
 const out=process.argv.find(x=>x.startsWith('-outdir='))?.slice(8);
 const main=process.argv.at(-1),dir=process.cwd(),tex=fs.readFileSync(main,'utf8'),base=path.basename(main,'.tex');
 fs.mkdirSync(out,{recursive:true});
+if(tex.includes('\\include{Isi/Sub/Bab2}') && !fs.existsSync(path.join(out,'Isi','Sub'))) { console.error('Missing AUX folder before compiler starts'); process.exit(3); }
 if(tex.includes('\\\\MOCKSTALE')&&!fs.existsSync(path.join(dir,'.mock-retried'))){
  fs.writeFileSync(path.join(dir,'.mock-retried'),'1');
  console.log("Latexmk: Nothing to do for '"+main+"'.\\nCollected error summary:\\n lualatex: gave an error in previous invocation of latexmk.");
@@ -67,6 +69,16 @@ async function req(port,method,url,body){return new Promise((resolve,reject)=>{
   result=await req(port,'POST',pathBuild,{engine:'pdf',clean:true});
   assert.equal(result.data.ok,true);assert.equal(result.data.clean,true);
   assert.match(result.data.log,/Clean & Recompile/);
+  // Preflight must run before every compile, including Clean & Recompile.
+  const chapter=await req(port,'PUT',`/api/projects/${id}/file`,{path:'Isi/Sub/Bab2.tex',content:'\\chapter{Bab 2}'});
+  assert.equal(chapter.status,200);
+  await write('\\documentclass{report}\n\\begin{document}\n\\include{Isi/Sub/Bab2}\n\\end{document}');
+  result=await req(port,'POST',pathBuild,{engine:'lualatex'});
+  assert.equal(result.data.ok,true,JSON.stringify(result.data));
+  assert(fs.existsSync(path.join(dest,'workspace',id,'.latexstudio-build','Isi','Sub')));
+  result=await req(port,'POST',pathBuild,{engine:'lualatex',clean:true});
+  assert.equal(result.data.ok,true,JSON.stringify(result.data));
+  assert(fs.existsSync(path.join(dest,'workspace',id,'.latexstudio-build','Isi','Sub')));
   await write('\\documentclass{article}\n% MOCKSLOW\n\\begin{document}RUN\\end{document}');
   const pending=req(port,'POST',pathBuild,{engine:'lualatex'});
   await delay(500);
@@ -75,6 +87,6 @@ async function req(port,method,url,body){return new Promise((resolve,reject)=>{
   assert.equal((await req(port,'POST',pathBuild+'/stop')).data.stopping,true);
   const stopped=await Promise.race([pending,delay(4500).then(()=>{throw new Error('Stop did not end compiler')})]);
   assert.equal(stopped.data.ok,false);assert.match(stopped.data.summary,/dihentikan oleh pengguna/);
-  console.log('[PASS] Error location, stale auto-clean, clean compile, live status, Stop Compile');
+  console.log('[PASS] Error location, stale auto-clean, clean compile, include AUX directories, live status, Stop Compile');
  }finally{child.kill('SIGTERM');await delay(100);fs.rmSync(tmp,{recursive:true,force:true})}
 })().catch(e=>{console.error('[FAIL]',e);process.exitCode=1;fs.rmSync(tmp,{recursive:true,force:true})});

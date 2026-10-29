@@ -11,7 +11,7 @@ EK TeX adalah editor LaTeX berbasis browser yang dijalankan pada komputer sendir
 
 - **Project dashboard:** buat, buka, cari, dan impor proyek ZIP.
 - **Source editor:** penyuntingan banyak file, autosave, pencarian, backup lokal, dan sidebar yang bisa diminimalkan (`Ctrl+B`).
-- **PDF compiler:** pdfLaTeX, XeLaTeX, dan LuaLaTeX menggunakan `latexmk`; log langsung, navigasi error ke nomor baris, Stop Compile, dan Clean & Recompile.
+- **PDF compiler:** pdfLaTeX, XeLaTeX, dan LuaLaTeX menggunakan `latexmk`; log langsung, navigasi error ke nomor baris, Stop Compile, dan Clean & Recompile. Folder `.aux` untuk bab dalam subfolder disiapkan sebelum setiap kompilasi.
 - **Bibliografi:** pencarian Crossref melalui judul/DOI dan pembaruan metadata `references.bib`.
 - **Debugger bawaan:** identifikasi beberapa masalah umum dari log, termasuk paket `.sty` yang tidak ditemukan, font, dan perintah LaTeX yang tidak dikenal. Memberikan langkah perbaikan—**tidak menjalankan `sudo apt` diam-diam**.
 - **Hermes Agent (opsional):** jika perintah `hermes` tersedia dan model telah dikonfigurasi, pengguna dapat meminta analisis AI pada log/error dan file `.tex`. Perubahan yang diusulkan ditampilkan sebagai perbandingan teks lama/baru, **memerlukan persetujuan untuk diterapkan**, dan file awal dibackup. Jika berkas berubah sejak saran dibuat, penerapan ditolak.
@@ -76,6 +76,32 @@ cd ~/Documents/EK-TeX
 ```
 
 Jika versi yang digunakan masih belum memiliki `update-linux.sh`, pakai `git pull --ff-only origin main` untuk pembaruan pertama. Jika instalasi berasal dari **Download ZIP**, unduh paket terbaru dan ganti file aplikasi saja, **jangan timpa `workspace/`**. Hindari menjalankan `git pull` jika terdapat perubahan source lokal yang belum disimpan.
+
+## Dukungan proyek multi-file dengan `\include` (v2.5.1)
+
+EK TeX otomatis menyiapkan direktori pendukung di `.latexstudio-build/` sebelum **setiap** pemanggilan `latexmk`, termasuk kompilasi normal, **Clean & Recompile**, dan pemulihan cache error lama. Ini menghindari masalah ketika berkas `.aux` dari `\include` harus ditulis ke subfolder yang belum dibuat.
+
+Contoh proyek:
+
+```text
+workspace/proyek-tesis/
+├── main.tex
+└── Isi/
+    ├── Bab1.tex
+    └── Sub/
+        └── Bab2.tex
+```
+
+Jika `main.tex` berisi:
+
+```latex
+\include{Isi/Bab1}
+\include{Isi/Sub/Bab2}
+```
+
+EK TeX menyiapkan `workspace/proyek-tesis/.latexstudio-build/Isi/` dan `.latexstudio-build/Isi/Sub/` sehingga compiler dapat menghasilkan `Isi/Bab1.aux` dan `Isi/Sub/Bab2.aux` di lokasi build. Struktur folder proyek dan isi berkas `.tex` **tidak diubah**. Saat **Clean & Recompile**, cache build lama dihapus dan folder tersebut dibuat kembali sebelum kompilasi.
+
+Folder dari berkas `.tex` lokal ikut dicerminkan untuk membantu proyek yang menggunakan jalur `\include` dinamis. Pemindaian dibatasi pada proyek lokal dan tidak mengikuti symlink. Perintah yang membangun nama folder di luar proyek atau menggunakan jalur yang tidak aman tidak didukung. Perbaikan ini tidak menggantikan instalasi paket LaTeX yang hilang atau perbaikan sintaks dokumen.
 
 ## Debugger dan saran perbaikan Hermes
 

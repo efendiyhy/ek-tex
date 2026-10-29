@@ -33,7 +33,7 @@ function Copy-EKTexApp {
         }
     }
 
-    foreach ($folder in @('public', 'scripts', 'assets', 'tests', 'docs')) {
+    foreach ($folder in @('public', 'scripts', 'assets', 'tests', 'docs', 'lib')) {
         $from = Join-Path $SourceDir $folder
         if (-not (Test-Path -LiteralPath $from -PathType Container)) { continue }
         $to = Join-Path $TargetDir $folder

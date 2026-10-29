@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.5.1 — Nested include AUX build directories
+
+- Prepare build subfolders corresponding to local LaTeX source directories and literal `\include{...}` paths **before every compiler attempt**.
+- Recreate those subfolders after Clean & Recompile and automatic recovery from stale latexmk state.
+- Follow nested `\input`/`\include` references where safely resolvable, skip comments and unsafe paths, and never follow project symlinks.
+- Include the new helper module in the Windows GitHub/ZIP installer copying routine.
+- Add unit, integration, and real `latexmk` tests for nested `.aux` output, and document upgrading in README.
+
 ## v2.5.0 — Debugger, Hermes, and Pandoc
 
 - Added offline LaTeX problem analyzer with actionable suggestions for several missing `.sty` packages, font errors, and stale `latexmk` state.

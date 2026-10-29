@@ -13,6 +13,7 @@ const cp = path.join(temp, 'app');
 fs.mkdirSync(cp);
 fs.copyFileSync(path.join(root, 'server.js'), path.join(cp, 'server.js'));
 fs.cpSync(path.join(root, 'public'), path.join(cp, 'public'), {recursive:true});
+fs.cpSync(path.join(root, 'lib'), path.join(cp, 'lib'), {recursive:true});
 
 function freePort() {return new Promise((resolve, reject) => {const s=net.createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const {port}=s.address();s.close(()=>resolve(port));});});}
 function request(port, method, route, data) {return new Promise((resolve, reject)=>{

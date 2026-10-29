@@ -23,6 +23,7 @@ assert.match(github, /scripts\\copy-app\.ps1/);
 assert.match(copy, /New-Item -ItemType Directory -Path \(Join-Path \$TargetDir 'workspace'\)/);
 assert.doesNotMatch(copy, /Copy-Item[^\n]*workspace/);
 assert.doesNotMatch(copy, /Remove-Item/);
+assert.match(copy, /'lib'/); // Ensure the compiler preflight module is included on Windows installations.
 assert.match(installer, /EK TeX\.lnk/);
 assert.match(updater, /-NoLaunch/);
 assert.match(read('update-linux.sh'), /git pull --ff-only origin main/);
