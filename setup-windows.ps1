@@ -17,7 +17,8 @@ function Update-Path {
     "$env:LOCALAPPDATA\Programs\MiKTeX 2.9\miktex\bin\x64",
     "$env:ProgramFiles\MiKTeX\miktex\bin\x64",
     "$env:ProgramFiles\MiKTeX 2.9\miktex\bin\x64",
-    'C:\Strawberry\perl\bin', 'C:\Strawberry\c\bin'
+    'C:\Strawberry\perl\bin', 'C:\Strawberry\c\bin',
+    "$env:ProgramFiles\Pandoc", "$env:LOCALAPPDATA\Programs\Pandoc"
   )
   foreach($folder in $candidates) { if($folder -and (Test-Path -LiteralPath $folder)) { $paths += ";$folder" } }
   $env:Path = (@($paths -split ';' | Where-Object { $_ -and $_.Trim() } | Select-Object -Unique) -join ';')
@@ -49,12 +50,15 @@ try {
   # MiKTeX latexmk is Perl-based; TeX Live may already bundle its own Perl.
   if(-not (Has 'perl.exe')) { $missing += 'Strawberry Perl (latexmk)' }
   if(-not (Has 'latexmk')) { $missing += 'latexmk package' }
+  if(-not (Has 'pandoc.exe')) { $missing += 'Pandoc (document converter)' }
   Need-Install $missing
   if(-not (Has 'node.exe')) { Install-WingetPackage 'OpenJS.NodeJS.LTS' 'Node.js LTS' }
   if(-not (Has 'pdflatex.exe')) { Install-WingetPackage 'MiKTeX.MiKTeX' 'MiKTeX' }
   # If latexmk exists in a TeX Live distribution, it might already include Perl.
   if(-not (Has 'perl.exe')) { Install-WingetPackage 'StrawberryPerl.StrawberryPerl' 'Strawberry Perl' }
   Update-Path
+  if(-not (Has 'pandoc.exe')) { Install-WingetPackage 'JohnMacFarlane.Pandoc' 'Pandoc' }
+  if(-not (Has 'pandoc.exe')) { Write-Host '[WARN] Pandoc belum ditemukan; converter belum tersedia sampai PATH diperbarui.' -ForegroundColor Yellow }
   if(-not (Has 'node.exe')) { throw 'Node.js tidak ditemukan setelah pemasangan.' }
   if(-not (Has 'pdflatex.exe')) { throw 'pdfLaTeX tidak ditemukan setelah pemasangan.' }
   if(-not (Has 'perl.exe')) { throw 'Perl tidak ditemukan setelah pemasangan.' }

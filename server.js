@@ -5,6 +5,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const os = require('os');
+const crypto = require('crypto');
 const {spawn, spawnSync} = require('child_process');
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
@@ -258,6 +260,127 @@ function importProject(obj){
   return project;
  }catch(e){fs.rmSync(dir,{recursive:true,force:true});throw e;}
 }
+// EK TeX 2.5 — diagnosis (offline), local Hermes suggestions, Pandoc converters.
+function isAvailable(binary){
+  try{const r=spawnSync(binary,['--version'],{encoding:'utf8',timeout:3500,windowsHide:true});return !r.error&&r.status===0;}catch{return false;}
+}
+function analyzeLatex(text){
+ const log=String(text||''),issues=[],seen=new Set();
+ function note(code,title,detail,fix){if(seen.has(code))return;seen.add(code);issues.push({code,title,detail,fix});}
+ for(const match of log.matchAll(/(?:LaTeX Error:\s*File\s*[`']([^`'\n]+\.sty)['`]\s*not found|File\s*[`']([^`'\n]+\.sty)['`]\s*not found)/gi)){
+  const file=match[1]||match[2];const known={
+   'algorithmic.sty':'texlive-science','algorithm.sty':'texlive-science','algpseudocode.sty':'texlive-science',
+   'tikz.sty':'texlive-pictures','pgfplots.sty':'texlive-pictures',
+   'geometry.sty':'texlive-latex-recommended','hyperref.sty':'texlive-latex-recommended',
+   'biblatex.sty':'texlive-bibtex-extra','multirow.sty':'texlive-latex-extra',
+   'titlesec.sty':'texlive-latex-extra','float.sty':'texlive-latex-extra',
+   'subcaption.sty':'texlive-latex-extra','siunitx.sty':'texlive-science',
+   'physics.sty':'texlive-latex-extra'};
+  const apt=known[file];note('missing-'+file,`Paket tidak ditemukan: ${file}`,`File ${file} tidak terpasang pada distribusi LaTeX.`,apt?`Ubuntu/Debian: sudo apt install ${apt} · lalu Clean & Recompile. Windows/MiKTeX: instal paket melalui MiKTeX Console.`:'Cari nama paket yang menyediakan '+file+' dengan tlmgr atau MiKTeX Console, kemudian Clean & Recompile.');
+ }
+ if(/Undefined control sequence/i.test(log))note('undefined','Perintah LaTeX tidak dikenali','Periksa command yang dilaporkan beserta nama file dan barisnya.','Perbaiki nama perintah atau tambahkan paket yang menyediakan command tersebut.');
+ if(/Font .* not found|fontspec error|font .* cannot be found/i.test(log))note('font','Font tidak ditemukan','Font dalam dokumen tidak tersedia di sistem.','Instal font yang diminta atau gunakan nama font yang terpasang.');
+ if(/Emergency stop|Fatal error occurred/i.test(log)&&!issues.length)note('fatal','Kompilasi berhenti','Compiler menghentikan proses karena error sebelumnya.','Lihat error pertama pada log, bukan pesan terakhir.');
+ if(/gave an error in previous invocation/i.test(log))note('stale','latexmk mengingat error sebelumnya','Status build sebelumnya masih tersimpan.','Gunakan Clean & Recompile; ini tidak menghapus file sumber.');
+ if(!issues.length)note('general','Periksa log kompilasi','Belum ada diagnosis otomatis yang cocok.','Klik lokasi error pada panel log, atau gunakan Hermes untuk saran perbaikan.');
+ return issues;
+}
+function runBounded(command,args,{cwd,input,timeout=60000,maxOutput=350000}={}){return new Promise((resolve,reject)=>{
+ let child;try{child=spawn(command,args,{cwd,windowsHide:true,shell:false,stdio:['pipe','pipe','pipe']});}catch(e){return reject(e);}
+ let out='',err='',exceeded=false,timedOut=false,ended=false;
+ const timer=setTimeout(()=>{timedOut=true;endTree();},timeout);
+ function endTree(){if(child.pid&&process.platform==='win32'){spawn('taskkill',['/PID',String(child.pid),'/T','/F'],{windowsHide:true}).on('error',()=>{try{child.kill()}catch{}})}else{try{child.kill('SIGKILL')}catch{}}}
+ const collect=(which,buf)=>{if(which==='out')out+=buf.toString('utf8');else err+=buf.toString('utf8');if(out.length+err.length>maxOutput){exceeded=true;endTree();}};
+ child.stdin.on('error',()=>{}); // child may exit before stdin closes
+ child.stdout.on('data',b=>collect('out',b));child.stderr.on('data',b=>collect('err',b));
+ child.on('error',e=>{if(!ended){ended=true;clearTimeout(timer);reject(e)}});
+ child.on('close',code=>{if(ended)return;ended=true;clearTimeout(timer);if(timedOut)return reject(fail(504,'Proses melebihi batas waktu.'));if(exceeded)return reject(fail(413,'Output aplikasi eksternal terlalu besar.'));resolve({code,out,err})});
+ if(input!==undefined)child.stdin.end(input);else child.stdin.end();
+});}
+const proposals=new Map();const locks=new Set();
+const sha=s=>crypto.createHash('sha256').update(s,'utf8').digest('hex');
+function parseHermesAdvice(s){
+ const raw=s.trim();let data;try{data=JSON.parse(raw)}catch{
+  const m=raw.match(/```(?:json)?\s*([\s\S]*?)```/i);if(m)try{data=JSON.parse(m[1])}catch{}
+  if(!data){const j=raw.indexOf('{'),k=raw.lastIndexOf('}');if(j>=0&&k>j)try{data=JSON.parse(raw.slice(j,k+1))}catch{}}
+ }
+ if(!data||typeof data!=='object')return {explanation:raw.slice(0,5000),find:'',replace:''};
+ return {explanation:String(data.explanation||'Usulan perbaikan').slice(0,5000),find:typeof data.find==='string'?data.find:'',replace:typeof data.replace==='string'?data.replace:''};
+}
+async function hermesSuggest(dir,main,log,file){
+ if(!isAvailable('hermes'))throw fail(422,'Hermes Agent tidak ditemukan di PATH. Instal dan konfigurasi Hermes terlebih dahulu.');
+ const target=safePath(dir,file);if(path.extname(target).toLowerCase()!=='.tex'||!fs.existsSync(target))throw fail(400,'Pilih file .tex yang ada.');
+ const original=fs.readFileSync(target,'utf8');if(original.length>110000)throw fail(413,'File terlalu besar untuk saran AI. Pilih file lebih kecil.');
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'ektex-hermes-'));
+ const prompt=`Anda adalah pemeriksa kode LaTeX. TUGAS READ-ONLY: jangan gunakan tools, jangan jalankan perintah, jangan akses file, jangan mengubah apapun.\nKembalikan HANYA JSON dengan {"explanation":"...","find":"teks lama persis","replace":"teks pengganti"}. Pilih 1 perubahan TERKECIL yang benar-benar dapat membantu error, dan hanya jika yakin. Jika masalah paket yang tidak terpasang, isi find dan replace dengan string kosong dan jelaskan perintah manualnya. Jangan hapus persamaan atau konten penelitian. Gunakan teks yang diberikan saja.\n\nLOG ERROR (potongan):\n${log.slice(-15000)}\n\nFILE ${file}:\n${original}`;
+ try{
+  const promptFile=path.join(tmp,'prompt.txt');fs.writeFileSync(promptFile,prompt,{mode:0o600});
+  // Never hand the agent a real project path or any write access through this API.
+  // Hermes' configured provider/model must be set up by the user. No commands run automatically.
+  const result=await runBounded('hermes',['chat','--oneshot','--query-file',promptFile,'--max-turns','1','--ignore-rules'],{cwd:tmp,timeout:90000,maxOutput:140000});
+  if(result.code!==0)throw fail(502,'Hermes gagal: '+(result.err||result.out).slice(-1200));
+  const advice=parseHermesAdvice(result.out);
+  let proposalId=null,newContent=null;
+  if(advice.find&&advice.find.length<=20000&&advice.replace.length<=20000){
+   const index=original.indexOf(advice.find);
+   if(index!==-1&&original.indexOf(advice.find,index+advice.find.length)===-1){
+    newContent=original.slice(0,index)+advice.replace+original.slice(index+advice.find.length);
+    if(newContent!==original&&Buffer.byteLength(newContent)<3*1024*1024){
+     proposalId=crypto.randomBytes(20).toString('hex');proposals.set(proposalId,{project:path.basename(dir),file,hash:sha(original),content:newContent,created:Date.now()});
+    }
+   }
+  }
+  return {explanation:advice.explanation,find:proposalId?advice.find:'',replace:proposalId?advice.replace:'',proposalId,canApply:!!proposalId};
+ }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+}
+function saveProposal(dir,id){
+ const item=proposals.get(id);if(!item||Date.now()-item.created>15*60*1000||item.project!==path.basename(dir))throw fail(404,'Saran tidak ditemukan/kedaluwarsa.');
+ const f=safePath(dir,item.file);const original=fs.readFileSync(f,'utf8');if(sha(original)!==item.hash)throw fail(409,'File sudah berubah. Minta diagnosis baru untuk menghindari penimpaan perubahan.');
+ const bak=path.join(dir,'.latexstudio-backups');fs.mkdirSync(bak,{recursive:true});
+ const basename=path.basename(item.file).replace(/[^a-zA-Z0-9._-]/g,'_');
+ const backup=basename+'--ai-'+Date.now()+'-'+crypto.randomBytes(3).toString('hex')+'.bak';fs.writeFileSync(path.join(bak,backup),original);
+ fs.writeFileSync(f,item.content);proposals.delete(id);
+ return {ok:true,file:item.file,backup};
+}
+const CONV_INPUT={'.docx':'docx','.odt':'odt','.md':'markdown','.markdown':'markdown','.html':'html','.htm':'html','.tex':'latex'};
+const CONV_OUTPUT={latex:'.tex',docx:'.docx',markdown:'.md',html:'.html'};
+function copyMedia(src,dst,depth=0,counts={n:0,size:0}){
+ if(depth>5||!fs.existsSync(src))return;
+ for(const e of fs.readdirSync(src,{withFileTypes:true})){
+  if(e.isSymbolicLink())continue;const here=path.join(src,e.name),to=path.join(dst,e.name);
+  if(e.isDirectory()){fs.mkdirSync(to,{recursive:true});copyMedia(here,to,depth+1,counts)}
+  else if(e.isFile()){counts.n++;counts.size+=fs.statSync(here).size;if(counts.n>100||counts.size>20*1024*1024)throw fail(413,'Jumlah/ukuran media hasil konversi terlalu besar.');fs.mkdirSync(path.dirname(to),{recursive:true});fs.copyFileSync(here,to);}
+ }
+}
+async function convertDocument(dir,obj){
+ if(!isAvailable('pandoc'))throw fail(422,'Pandoc belum terpasang. Jalankan setup-linux.sh atau setup-windows.ps1 untuk menginstalnya.');
+ const name=String(obj.name||'').slice(0,150),ext=path.extname(name).toLowerCase(),from=CONV_INPUT[ext],to=String(obj.to||'latex');
+ if(!from||!CONV_OUTPUT[to])throw fail(400,'Format konversi tidak didukung.');
+ if(typeof obj.data!=='string'||obj.data.length>17*1024*1024||!/^[A-Za-z0-9+/]*={0,2}$/.test(obj.data))throw fail(400,'Input konversi harus berupa file base64 yang valid (maks. 12 MB).');
+ const bin=Buffer.from(obj.data,'base64');if(!bin.length||bin.length>12*1024*1024)throw fail(413,'File terlalu besar/kosong.');
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'ektex-pandoc-'));
+ try{
+  const input=path.join(tmp,'source'+ext),output='converted'+CONV_OUTPUT[to];fs.writeFileSync(input,bin);
+  const args=['--from',from,'--to',to,'--standalone','--output',output];
+  if(to==='latex')args.push('--extract-media=media');
+  if(from==='latex'&&to==='docx')args.push('--resource-path='+tmp);
+  args.push(input);
+  const result=await runBounded('pandoc',args,{cwd:tmp,timeout:70000,maxOutput:60000});
+  if(result.code!==0)throw fail(422,'Pandoc gagal: '+(result.err||result.out).slice(-2200));
+  const generated=path.join(tmp,output);if(!fs.existsSync(generated))throw fail(500,'File hasil konversi tidak ditemukan.');
+  if(fs.statSync(generated).size>14*1024*1024)throw fail(413,'Hasil konversi terlalu besar.');
+  if(to==='latex'){
+   const stem=slug(path.basename(name,ext)).slice(0,35)||'document';let folder='imports/'+stem+'-'+Date.now().toString(36),target=safePath(dir,folder+'/converted.tex');
+   fs.mkdirSync(path.dirname(target),{recursive:true});
+   // Copy all outputs first. No source file in this project is overwritten.
+   fs.copyFileSync(generated,target);
+   copyMedia(path.join(tmp,'media'),safePath(dir,folder+'/media'));
+   return {ok:true,type:'project',file:folder+'/converted.tex',note:'Hasil disimpan sebagai file baru di imports/. Gambar diekstrak ke folder media/.'};
+  }
+  return {ok:true,type:'download',name:slug(path.basename(name,ext))+CONV_OUTPUT[to],data:fs.readFileSync(generated).toString('base64')};
+ }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+}
+
 const backupStamps=new Map();
 function snapshotIfDue(dir,rel,file){
  if(!fs.existsSync(file)||!fs.statSync(file).isFile())return;
@@ -272,7 +395,7 @@ function snapshotIfDue(dir,rel,file){
 const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 async function router(req,res){
  const url=new URL(req.url,'http://127.0.0.1');const p=url.pathname,method=req.method;
- if(p==='/api/status'&&method==='GET')return json(res,{latexmk:commandAvailable('latexmk'),pdflatex:commandAvailable('pdflatex'),perl:commandAvailable('perl'),bibtex:commandAvailable('bibtex'),xelatex:commandAvailable('xelatex'),lualatex:commandAvailable('lualatex'),node:process.version,workspace:WORKSPACE});
+ if(p==='/api/status'&&method==='GET')return json(res,{latexmk:commandAvailable('latexmk'),pdflatex:commandAvailable('pdflatex'),perl:commandAvailable('perl'),bibtex:commandAvailable('bibtex'),xelatex:commandAvailable('xelatex'),lualatex:commandAvailable('lualatex'),pandoc:isAvailable('pandoc'),hermes:isAvailable('hermes'),node:process.version,workspace:WORKSPACE});
  if(p==='/api/projects'&&method==='GET')return json(res,listProjects());
  if(p==='/api/projects'&&method==='POST'){const d=await body(req);return json(res,createProject(d.name,d.template),201);}
  if(p==='/api/projects/import'&&method==='POST'){const d=await body(req);return json(res,importProject(d),201);}
@@ -285,6 +408,27 @@ async function router(req,res){
    const doi=String(url.searchParams.get('doi')||'').trim().replace(/^https?:\/\/(?:dx\.)?doi\.org\//i,'').replace(/^doi:/i,'');
    if(!/^10\.\d{4,9}\/\S{1,200}$/i.test(doi))throw fail(400,'Format DOI tidak valid.');
    const data=await httpsJson('https://api.crossref.org/works/'+encodeURIComponent(doi));return json(res,crossrefBib(data.message));
+ }
+ const addons=p.match(/^\/api\/projects\/([a-z0-9_-]+)\/(diagnose|hermes\/suggest|hermes\/apply|convert)$/);
+ if(addons){
+  const dir=safeProject(addons[1]),route=addons[2],job=buildJobs.get(path.basename(dir));
+  const cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));
+  if(route==='diagnose'&&method==='GET'){
+   let log=job?.log||'';if(!log){try{log=fs.readFileSync(path.join(dir,'.latexstudio-build','build.log'),'utf8')}catch{}}
+   return json(res,{issues:analyzeLatex(log),diagnostics:latexDiagnostics(dir,cfg.main,log),hermes:isAvailable('hermes'),pandoc:isAvailable('pandoc'),hasLog:!!log});
+  }
+  if(route==='hermes/suggest'&&method==='POST'){
+   if(locks.has(path.basename(dir)))throw fail(409,'Hermes sedang memproses permintaan lain di proyek ini.');
+   let d=await body(req);const file=String(d.file||cfg.main);
+   let log=job?.log||'';if(!log){try{log=fs.readFileSync(path.join(dir,'.latexstudio-build','build.log'),'utf8')}catch{}}
+   if(!log)throw fail(400,'Belum ada log kompilasi. Compile dahulu untuk menggunakan debugger AI.');
+   locks.add(path.basename(dir));try{return json(res,await hermesSuggest(dir,cfg.main,log,file))}finally{locks.delete(path.basename(dir))}
+  }
+  if(route==='hermes/apply'&&method==='POST'){
+   const d=await body(req);if(!/^[a-f0-9]{40}$/.test(d.proposalId||''))throw fail(400,'ID saran tidak valid.');return json(res,saveProposal(dir,d.proposalId));
+  }
+  if(route==='convert'&&method==='POST'){const d=await body(req,19*1024*1024);return json(res,await convertDocument(dir,d));}
+  throw fail(405,'Metode tidak didukung.');
  }
  const control=p.match(/^\/api\/projects\/([a-z0-9_-]+)\/build\/(status|stop)$/);
  if(control){

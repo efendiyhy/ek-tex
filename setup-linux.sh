@@ -14,7 +14,12 @@ command -v pdflatex >/dev/null 2>&1 || packages+=(texlive-latex-base)
 command -v xelatex >/dev/null 2>&1 || packages+=(texlive-xetex)
 command -v lualatex >/dev/null 2>&1 || packages+=(texlive-luatex)
 command -v biber >/dev/null 2>&1 || packages+=(biber)
+command -v pandoc >/dev/null 2>&1 || packages+=(pandoc)
+# Hermes Agent optional: detected automatically when already installed. Never auto-install without consent.
 # Templates rely on the following common LaTeX packages.
+if ! command -v kpsewhich >/dev/null 2>&1 || ! kpsewhich algorithmic.sty >/dev/null 2>&1; then
+  packages+=(texlive-science)
+fi
 if ! command -v kpsewhich >/dev/null 2>&1 || ! kpsewhich lmodern.sty >/dev/null 2>&1 || ! kpsewhich geometry.sty >/dev/null 2>&1 || ! kpsewhich beamer.cls >/dev/null 2>&1; then
   packages+=(texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended lmodern)
 fi

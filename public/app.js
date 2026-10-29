@@ -42,7 +42,7 @@ function renderTree(items){const host=$('file-tree');host.innerHTML='';
  }
  }};add(items)}
 async function reloadTree(){if(!state.project)return;renderTree(await api(`/api/projects/${state.project.id}/tree`));}
-function setSide(name){if(state.sidebarCollapsed)toggleSidebar(false);state.side=name;document.querySelectorAll('.railbtn[data-side]').forEach(b=>b.classList.toggle('active',b.dataset.side===name));for(const p of ['files','references','templates'])$('side-'+p).classList.toggle('hidden',p!==name);}
+function setSide(name){if(state.sidebarCollapsed)toggleSidebar(false);state.side=name;document.querySelectorAll('.railbtn[data-side]').forEach(b=>b.classList.toggle('active',b.dataset.side===name));for(const p of ['files','references','templates','tools'])$('side-'+p).classList.toggle('hidden',p!==name);}
 document.querySelectorAll('.railbtn[data-side]').forEach(b=>b.onclick=()=>setSide(b.dataset.side));
 async function loadProjects(){state.projects=await api('/api/projects');renderDashboard();}
 function fmtDate(n){return new Date(n).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});}
@@ -248,9 +248,65 @@ async function init(){
   $('compiler-status').innerHTML=`<span class="status-dot ${ready?'green':'amber'}"></span><span>${ready?'LaTeX ready':'Compiler belum siap'}</span>`;
   $('dash-compiler').textContent=ready?'READY':'NEEDS SETUP';
   $('dash-compiler').classList.toggle('needs-setup',!ready);
+  $('hermes-status').textContent=s.hermes?'Hermes terdeteksi':'Hermes belum terpasang';
+  $('pandoc-status').textContent=s.pandoc?'Pandoc terdeteksi':'Pandoc belum terpasang';
   $('dash-compiler-note').textContent=ready?'latexmk & pdfLaTeX terdeteksi':'Jalankan ulang launcher untuk setup';
   await loadProjects();
   if(!ready)toast('Compiler belum terdeteksi. Jalankan setup-windows.ps1 / setup-linux.sh.',true);
  }catch(e){toast('Gagal memuat dashboard: '+e.message,true);$('dash-compiler').textContent='OFFLINE';}
 }
 init();
+
+
+// EK TeX v2.5: Offline diagnostics, optional Hermes Agent, Pandoc conversion.
+async function showDebugger(){
+ if(!state.project)return;
+ setSide('tools');$('debug-report').textContent='Menganalisis log...';
+ try{const r=await api(`/api/projects/${state.project.id}/diagnose`);
+  $('debug-report').replaceChildren();
+  for(const issue of r.issues){const card=document.createElement('div');card.className='debug-issue';
+   const h=document.createElement('strong');h.textContent=issue.title;const d=document.createElement('p');d.textContent=issue.detail;
+   const f=document.createElement('code');f.textContent=issue.fix;card.append(h,d,f);$('debug-report').append(card);}
+  $('hermes-status').textContent=r.hermes?'Hermes terdeteksi (butuh model/akun yang sudah dikonfigurasi).':'Hermes belum terdeteksi. Debugger offline tetap tersedia.';
+  $('pandoc-status').textContent=r.pandoc?'Pandoc tersedia.':'Pandoc belum tersedia. Jalankan setup ulang.';
+ }catch(e){$('debug-report').textContent=e.message;toast(e.message,true)}
+}
+$('run-debugger').onclick=showDebugger;
+$('open-debugger').onclick=showDebugger;
+$('hermes-diagnose').onclick=async()=>{
+ if(!state.project)return;
+ try{
+  await saveAll();const btn=$('hermes-diagnose');btn.disabled=true;btn.textContent='Hermes sedang menganalisis...';
+  toast('Meminta saran Hermes. Kode tidak akan diubah otomatis.');
+  const response=await api(`/api/projects/${state.project.id}/hermes/suggest`,'POST',{file:(state.active||state.config.main).endsWith('.tex')?(state.active||state.config.main):state.config.main});
+  const explanation=esc(response.explanation);
+  if(!response.canApply){modal('Hasil diagnosis Hermes',`<p class="muted">${explanation}</p><p>Tidak ada perubahan kode yang dapat diterapkan dengan aman. Periksa saran di atas.</p>`,`<button class="btn primary" data-cancel>Tutup</button>`,'AI DEBUGGER');return;}
+  modal('Tinjau perbaikan Hermes',`<p>${explanation}</p><p class="muted">Periksa penggantian teks berikut. Backup dibuat sebelum penerapan.</p><label>Teks lama</label><pre class="diff-before">${esc(response.find)}</pre><label>Teks pengganti</label><pre class="diff-after">${esc(response.replace)}</pre><p class="muted">Perubahan hanya berlaku setelah Anda memilih Terapkan.</p>`,modalButtons('Terapkan perbaikan'),'HERMES · REVIEW');
+  $('modal-apply').onclick=async()=>{if(!confirm('Terapkan perubahan yang ditinjau? File lama akan dibackup.'))return;
+   try{await saveAll();const saved=await api(`/api/projects/${state.project.id}/hermes/apply`,'POST',{proposalId:response.proposalId});
+    // Reload the changed file. Discard stale in-memory cache (only after saving).
+    state.docs.delete(saved.file);if(state.active===saved.file)state.active=null;await openFile(saved.file);await reloadTree();closeModal();toast('Perbaikan diterapkan. Backup: '+saved.backup);}
+   catch(e){toast(e.message,true)}
+  };
+ }catch(e){toast('Hermes: '+e.message,true);modal('Hermes tidak dapat digunakan',`<p>${esc(e.message)}</p><p>Jika Hermes terpasang, pastikan <code>hermes --version</code> berfungsi dan model sudah dikonfigurasi.</p>`,`<button class="btn primary" data-cancel>Tutup</button>`,'HERMES');}
+ finally{$('hermes-diagnose').disabled=false;$('hermes-diagnose').textContent='✦ Minta saran perbaikan AI';}
+};
+$('convert-open').onclick=()=>{
+ if(!state.project)return;
+ modal('Konversi dokumen',`<p>Impor DOCX, ODT, Markdown, HTML, atau LaTeX. Pandoc mempertahankan struktur dokumen sejauh format mendukungnya.</p><label>File sumber</label><input id="converter-file-name" readonly placeholder="Klik Pilih file di bawah"><button class="btn outline" id="converter-pick">Pilih file...</button><label>Format tujuan</label><select id="converter-target" class="converter-select"><option value="latex">LaTeX (.tex), simpan di proyek</option><option value="docx">Word (.docx), unduh</option><option value="markdown">Markdown (.md), unduh</option><option value="html">HTML (.html), unduh</option></select><p class="muted">Hasil .tex dibuat sebagai file baru pada folder imports/. Format lain diunduh. Periksa persamaan, tabel, gambar, dan sitasi setelah konversi.</p>`,modalButtons('Mulai konversi'),'PANDOC');
+ $('converter-pick').onclick=()=>$('convert-input').click();
+ $('convert-input').onchange=e=>{$('converter-file-name').value=e.target.files?.[0]?.name||'';};
+ $('modal-apply').onclick=async()=>{
+  const file=$('convert-input').files?.[0],to=$('converter-target').value;
+  if(!file)return toast('Pilih file terlebih dahulu.',true);
+  if(file.size>12*1024*1024)return toast('File melebihi 12 MB.',true);
+  const btn=$('modal-apply');btn.disabled=true;btn.textContent='Converting...';
+  try{
+   await saveAll();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file)});
+   const result=await api(`/api/projects/${state.project.id}/convert`,'POST',{name:file.name,data,to});
+   if(result.type==='project'){await reloadTree();await openFile(result.file);toast('Hasil konversi disimpan: '+result.file)}
+   else{const bytes=atob(result.data),array=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)array[i]=bytes.charCodeAt(i);const url=URL.createObjectURL(new Blob([array]));const a=document.createElement('a');a.href=url;a.download=result.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('Konversi selesai: '+result.name)}
+   closeModal();$('convert-input').value='';
+  }catch(e){toast(e.message,true)}finally{btn.disabled=false;btn.textContent='Mulai konversi'}
+ };
+};

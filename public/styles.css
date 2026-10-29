@@ -76,3 +76,15 @@
 .diagnostic-item:not(:disabled):hover{background:rgba(255,255,255,.14);cursor:pointer}
 .diagnostic-item:disabled{cursor:default;opacity:.9}
 @media(max-width:1150px){.pdf-toolbar .clean-btn{font-size:0;padding:8px 11px}.pdf-toolbar .clean-btn::after{content:'Clean';font-size:11px}}
+
+/* EK TeX v2.5 — debugger and converter */
+.tool-stack{overflow-y:auto;flex:1;padding-bottom:24px}
+.debug-report{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.debug-issue{border:1px solid #385064;border-radius:8px;padding:12px;background:#1b2c40;line-height:1.45}
+.debug-issue strong{display:block;color:#b7ebe2;margin-bottom:7px}
+.debug-issue p{font-size:12px;color:#a6b9ce;margin:0 0 8px}
+.debug-issue code{font-size:11px;color:#e8d4a0;white-space:pre-wrap;overflow-wrap:anywhere}
+.diff-before,.diff-after{padding:12px;max-height:145px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:7px;font:12px/1.5 var(--code-font)}
+.diff-before{background:#3e242f;color:#ffd6db}.diff-after{background:#193e3b;color:#c5fff0}
+.converter-select{width:100%;padding:10px;background:#13243a;border:1px solid #385064;color:#dbe5f4;border-radius:7px}
+#converter-file-name{width:100%;margin-bottom:12px}
