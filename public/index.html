@@ -7,6 +7,7 @@
 <link rel="alternate icon" type="image/png" href="/favicon.png">
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/editor-features.css">
+<link rel="stylesheet" href="/reference-ui.css">
 </head>
 <body>
 <div id="app">
@@ -23,8 +24,8 @@
 </header>
 <section class="dashboard" id="dashboard" aria-label="Daftar proyek LaTeX">
   <div class="dash-shell">
-    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.7</div>
-    <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-settings" title="Pengaturan tema dan tampilan">⚙ Pengaturan</button><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
+    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.8</div>
+    <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-settings" title="Pengaturan tema dan tampilan">⚙ Pengaturan</button><button class="btn outline" id="dashboard-references">⌕ Referensi</button><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
     <div class="dash-overview"><div class="dash-stat"><span>PROYEK</span><strong id="dash-count">0</strong><small>tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Pemeriksaan awal</small></div><div class="dash-stat dash-stat-side"><span>IMPOR</span><button id="dashboard-import" class="dash-quick">⇧ Proyek ZIP <span>↗</span></button><small>Overleaf atau ZIP lokal</small></div></div>
     <div class="dash-library-head"><div><h2>Proyek saya</h2><span id="dash-subtitle">Semua proyek</span></div><label class="dash-search">⌕ <input id="dashboard-search" type="search" placeholder="Cari nama proyek..." aria-label="Cari proyek"></label></div>
     <div class="dash-list-head" aria-hidden="true"><span>PROYEK</span><span>FILE UTAMA</span><span>TERAKHIR DIUBAH</span><span>AKSI</span></div><div id="dashboard-projects" class="dash-list"></div>
@@ -49,14 +50,8 @@
    <div class="side-info"><div class="side-info-head">GETTING STARTED</div><div class="side-info-copy">Edit <strong>main.tex</strong>, lalu klik Compile untuk membuat PDF.</div><button class="linkbtn" id="help-compile">Cara instal compiler <span>↗</span></button></div>
   </section>
   <section class="sidepane hidden" id="side-references">
-   <div class="side-title"><span>ONLINE REFERENCES</span></div>
-   <div class="side-padding"><p class="muted">Temukan referensi ilmiah melalui Crossref dan masukkan langsung ke <strong>references.bib</strong>.</p>
-   <label class="field-label">DOI atau link DOI</label><div class="inputstack"><input id="doi-input" placeholder="10.1038/..."/><button id="doi-lookup" class="accent-btn">Cari</button></div>
-   <div class="or-divider">ATAU CARI JUDUL ARTIKEL</div>
-   <input id="ref-search" placeholder="Judul, penulis, topik..."/><button class="btn btn-wide outline" id="ref-search-btn">⌕ Cari publikasi</button>
-   <button class="btn btn-wide outline" id="ref-update-existing">↻ Perbarui metadata library dari DOI</button>
-   <div class="ref-results" id="ref-results"><div class="empty-mini">Hasil pencarian akan ditampilkan di sini.</div></div>
-   </div>
+   <div class="side-title"><span>REFERENCES</span></div>
+   <div class="side-padding"><p class="muted">Cari karya ilmiah menurut judul, penulis atau DOI dalam jendela khusus. Anda juga dapat memblok kalimat pada editor untuk mencari referensi yang relevan.</p><button class="btn btn-wide outline" id="reference-open-sidebar">⌕ Buka Pencarian Referensi</button><p class="muted">Klik tombol X untuk menutup pencarian. Referensi yang dipilih disimpan ke <code>references.bib</code>.</p></div>
   </section>
   <section class="sidepane hidden" id="side-templates">
    <div class="side-title"><span>LATEX SNIPPETS</span></div>
@@ -80,9 +75,9 @@
  </aside>
  <main class="main">
   <div class="editor-top"><div class="tabs" id="tabs"></div><div class="tab-actions"><button id="toggle-console" class="tab-act" title="Log hasil kompilasi">≡</button></div></div>
-  <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari di file (Ctrl+F)">⌕ Find</button><span class="vline"></span><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
+  <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari di file (Ctrl+F)">⌕ Find</button><span class="vline"></span><button class="toolbtn" id="open-reference-search">⌕ Referensi</button><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
   <div class="findbar hidden" id="findbar"><input id="find-input" placeholder="Cari di dokumen..."/><span id="find-count"></span><button id="find-next" class="mini-btn">↓</button><button id="find-close" class="mini-btn">✕</button></div>
-  <div class="editor-surface"><div class="line-numbers" id="line-numbers" aria-label="Nomor baris">1</div><div class="code-container"><pre id="syntax-layer" aria-hidden="true"></pre><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="LaTeX source code" aria-autocomplete="list" aria-controls="latex-suggestions"></textarea><div id="latex-suggestions" class="latex-suggestions hidden" role="listbox" aria-label="Saran perintah LaTeX"></div></div></div>
+  <div class="editor-surface"><button id="reference-selection-action" class="reference-selection-action hidden" type="button" title="Temukan publikasi yang mendukung teks terpilih">⌕ Cari Referensi</button><div class="line-numbers" id="line-numbers" aria-label="Nomor baris">1</div><div class="code-container"><pre id="syntax-layer" aria-hidden="true"></pre><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="LaTeX source code" aria-autocomplete="list" aria-controls="latex-suggestions"></textarea><div id="latex-suggestions" class="latex-suggestions hidden" role="listbox" aria-label="Saran perintah LaTeX"></div></div></div>
   <div class="editor-status"><span id="cursor-position">Ln 1, Col 1</span><span class="divider-small"></span><span id="file-type">LaTeX</span><div class="grow"></div><span>UTF-8</span><span class="divider-small"></span><span>Spaces: 2</span><span class="divider-small"></span><span id="file-status">Ready</span></div>
   <div class="console hidden" id="console"><div class="console-head"><strong>OUTPUT · COMPILE LOG</strong><div><button id="open-debugger" title="Analisis log">⚑ Debug</button><button id="copy-log" title="Salin log">Copy</button><button id="close-console" title="Tutup">✕</button></div></div><div id="build-summary" class="build-summary hidden" aria-live="polite"></div><pre id="log-text">Belum ada log kompilasi.</pre></div>
  </main>
@@ -93,11 +88,27 @@
   <div class="preview-footer"><span><i class="footer-dot"></i> Local rendering</span><button id="preview-help">Panduan PDF ↗</button></div>
  </section>
 </div>
-<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v2.7</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
+<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v2.8</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
+</div>
+<!-- Dialog pencarian khusus: ditutup hanya dengan tombol X. -->
+<div id="reference-overlay" class="reference-overlay hidden" role="presentation">
+ <section class="reference-dialog" role="dialog" aria-modal="true" aria-labelledby="reference-dialog-title" tabindex="-1">
+  <header class="reference-header"><div><div class="reference-eyebrow">EK TeX · RESEARCH TOOLS</div><h2 id="reference-dialog-title">Cari Referensi Ilmiah</h2><p>Cari metadata terverifikasi melalui Crossref; tinjau sebelum menyimpan ke BibTeX.</p></div><button id="reference-close" type="button" aria-label="Tutup pencarian referensi" class="reference-close">✕</button></header>
+  <div class="reference-body">
+   <div id="reference-selection-context" class="reference-context hidden"><strong>Kalimat yang dipilih</strong><p id="reference-quote"></p><small>Judul/konteks proyek: <span id="reference-project-title"></span></small><div class="reference-ai-bar"><span id="reference-ai-status">Menyiapkan kata kunci…</span><button type="button" id="reference-ai-retry" class="btn outline">✦ Analisis ulang</button></div><label for="reference-keywords">Kata kunci (dapat diedit)</label><div class="reference-keywords-line"><input id="reference-keywords" placeholder="Kata kunci hasil analisis"/><button id="reference-search-keywords" class="btn primary" type="button">Cari keyword</button></div></div>
+   <div class="reference-search-grid"><label>Judul artikel<input id="ref-title" type="search" placeholder="Contoh: gas sensor temperature compensation" autocomplete="off" /></label><label>Nama penulis<input id="ref-author" type="search" placeholder="Contoh: John Smith" autocomplete="off" /></label></div>
+   <div class="reference-search-actions"><button id="ref-manual-search" class="btn primary" type="button">⌕ Cari Judul / Penulis</button><span class="reference-hint">Isi salah satu atau keduanya</span></div>
+   <div class="reference-doi"><label>Atau cari langsung berdasarkan DOI</label><div class="reference-doi-line"><input id="ref-doi" placeholder="10.xxxx/... atau https://doi.org/..." /><button id="ref-doi-search" class="btn outline" type="button">Cari DOI</button></div></div>
+   <div class="reference-results-header"><strong>Hasil Publikasi</strong><button type="button" id="ref-update-library" class="btn outline">↻ Perbarui metadata DOI</button></div>
+   <div id="ref-dialog-results" class="reference-results" aria-live="polite"><p class="reference-empty">Masukkan judul, penulis, atau DOI untuk memulai pencarian.</p></div>
+   <div class="reference-fineprint">Rekomendasi AI hanya membantu menyusun kata kunci—bukan bukti bahwa suatu artikel mendukung klaim Anda. Periksa isi publikasi sebelum menyitasi. Jika Hermes menggunakan model online, kalimat terpilih dapat dikirim ke penyedia model yang dikonfigurasi.</div>
+  </div>
+ </section>
 </div>
 <div id="overlay" class="overlay hidden"><div class="dialog" role="dialog" aria-modal="true"><div class="dialog-header"><div><span id="dialog-kicker">LATEXSTUDIO</span><h2 id="dialog-title">Dialog</h2></div><button id="dialog-close" class="dialog-close">✕</button></div><div id="dialog-content"></div><div class="dialog-footer" id="dialog-footer"></div></div></div>
 <input type="file" id="convert-input" hidden accept=".docx,.odt,.md,.markdown,.html,.htm,.tex"><input type="file" id="zip-input" hidden accept=".zip,application/zip"><input type="file" id="file-input" hidden multiple accept=".tex,.bib,.sty,.cls,.txt,.csv,.json,.png,.jpg,.jpeg,.pdf,.svg,.eps,.webp,.bst,.def,.cfg,.dat,.md">
 <div id="toast" class="toast hidden"></div>
 <script src="/editor-features.js"></script>
 <script src="/app.js"></script>
+<script src="/reference-ui.js"></script>
 </body></html>

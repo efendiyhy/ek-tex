@@ -51,7 +51,7 @@ function renderTree(items){const host=$('file-tree');host.innerHTML='';
  }
  }};add(items)}
 async function reloadTree(){if(!state.project)return;renderTree(await api(`/api/projects/${state.project.id}/tree`));}
-function setSide(name){if(state.sidebarCollapsed)toggleSidebar(false);state.side=name;document.querySelectorAll('.railbtn[data-side]').forEach(b=>b.classList.toggle('active',b.dataset.side===name));for(const p of ['files','references','templates','tools'])$('side-'+p).classList.toggle('hidden',p!==name);}
+function setSide(name){if(name==='references'){window.EKTeXReferences?.open();return;}if(state.sidebarCollapsed)toggleSidebar(false);state.side=name;document.querySelectorAll('.railbtn[data-side]').forEach(b=>b.classList.toggle('active',b.dataset.side===name));for(const p of ['files','references','templates','tools'])$('side-'+p).classList.toggle('hidden',p!==name);}
 document.querySelectorAll('.railbtn[data-side]').forEach(b=>b.onclick=()=>setSide(b.dataset.side));
 async function loadProjects(){state.projects=await api('/api/projects');renderDashboard();}
 function fmtDate(n){return new Date(n).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});}
@@ -309,19 +309,16 @@ function helpDialog(){modal('Setup compiler otomatis',`<p>Instalasi sekarang <st
 # Alternatif di PowerShell: ./setup-windows.ps1</div><p><strong>Ubuntu / Debian / Orange Pi:</strong></p><div class="settings-code">chmod +x start-linux.sh setup-linux.sh
 ./start-linux.sh</div><p>Perlu koneksi internet pada instalasi pertama dan untuk paket LaTeX yang belum terpasang. Jika installer gagal, periksa izin administrator/sudo dan pesan kesalahan di terminal.</p>`,`<button class="btn primary" data-cancel>Mengerti</button>`,'INSTALLER');}
 $('help-compile').onclick=helpDialog;$('preview-help').onclick=helpDialog;
-$('show-shortcuts').onclick=()=>modal('Pintasan keyboard',`<p><strong>Ctrl + S</strong> — Simpan semua file</p><p><strong>Ctrl + Enter</strong> — Compile & refresh PDF</p><p><strong>Ctrl + F</strong> — Cari teks dalam dokumen</p><p><strong>Tab</strong> — Indent 2 spasi</p><p><strong>Shift + Tab</strong> — Hapus indent</p><p><strong>\</strong> — Tampilkan saran perintah LaTeX; panah ↑↓, Enter/Tab untuk memilih</p><p><strong>Esc</strong> — Tutup dialog/pencarian/autocomplete</p>`,`<button class="btn primary" data-cancel>Oke</button>`,'SHORTCUTS');
+$('show-shortcuts').onclick=()=>modal('Pintasan keyboard',`<p><strong>Ctrl + S</strong> — Simpan semua file</p><p><strong>Ctrl + Enter</strong> — Compile & refresh PDF</p><p><strong>Ctrl + F</strong> — Cari teks dalam dokumen</p><p><strong>Tab</strong> — Indent 2 spasi</p><p><strong>Shift + Tab</strong> — Hapus indent</p><p><strong>\</strong> — Tampilkan saran perintah LaTeX; panah ↑↓, Enter/Tab untuk memilih</p><p><strong>Esc</strong> — Tutup dialog biasa/autocomplete; popup Referensi hanya lewat tombol X</p>`,`<button class="btn primary" data-cancel>Oke</button>`,'SHORTCUTS');
 $('insert-figure').onclick=()=>insertCode(snippets.find(x=>x.title==='Figure').code);
 $('insert-cite').onclick=async()=>{try{await saveAll();const bib=await api(`/api/projects/${state.project.id}/file?path=references.bib`);const keys=[...bib.content.matchAll(/@\w+\s*\{\s*([^,\s]+)/g)].map(x=>x[1]);modal('Sisipkan kutipan',`<label>Citation key</label><input id="cite-key" list="cite-suggestions" value="${esc(keys[0]||'')}"><datalist id="cite-suggestions">${keys.map(k=>`<option value="${esc(k)}">`).join('')}</datalist><p>Pilih salah satu key dari references.bib, lalu tambahkan pada posisi kursor.</p>`,modalButtons('Sisipkan citation'),'BIBLIOGRAPHY');$('modal-apply').onclick=()=>{const key=$('cite-key').value.trim();closeModal();insertCode(`\\cite{${key}}`)};}catch(e){toast(e.message,true);setSide('references')}};
 function renderSnippets(){const host=$('snippets');host.innerHTML=snippets.map((s,i)=>`<button class="snippet-btn" data-snippet="${i}"><span>${esc(s.title)}</span><code>${esc(s.short)}</code></button>`).join('');host.querySelectorAll('button').forEach(b=>b.onclick=()=>insertCode(snippets[Number(b.dataset.snippet)].code));}
-function renderRefs(results){const host=$('ref-results');if(!results.length){host.innerHTML='<div class="empty-mini">Tidak ditemukan publikasi pada Crossref.</div>';return;}host.innerHTML='';for(const r of results){const c=document.createElement('div');c.className='ref-card';c.innerHTML=`<div class="ref-title">${esc(r.title||'Tanpa judul')}</div><div class="ref-meta">${esc(String(r.authors||'').slice(0,120))}<br>${esc(r.venue||'')} · ${esc(r.year||'n.d.')}${r.doi?`<br>DOI: ${esc(r.doi)}`:''}</div><button>＋ Tambahkan ke references.bib</button>`;c.querySelector('button').onclick=()=>addBib(r);host.append(c);}}
-async function addBib(r){if(!state.project)return;try{let p='references.bib';if(state.docs.has(p)&&state.docs.get(p).dirty)await savePath(p);let doc=await api(`/api/projects/${state.project.id}/file?path=references.bib`);let prev=doc.content;
- if(r.doi&&prev.toLowerCase().includes('doi = {'+r.doi.toLowerCase()+'}'))return toast('DOI sudah ada pada library.',true);
+async function addBib(r,options={}){if(!state.project)throw new Error('Pilih proyek sebelum menyimpan bibliografi.');try{let p='references.bib';if(state.docs.has(p)&&state.docs.get(p).dirty)await savePath(p);let doc=await api(`/api/projects/${state.project.id}/file?path=references.bib`);let prev=doc.content;
+ if(r.doi){const old=bibliographyEntries(prev).find(e=>e.doi.toLowerCase()===r.doi.toLowerCase());if(old){toast('DOI sudah ada di library (key: '+old.key+').');return old.key;}}
  let key=r.key,idx=2;while(new RegExp('@\\w+\\s*\\{\\s*'+key+'\\s*,','i').test(prev)){key=r.key+idx++;}
  let bib=key!==r.key?r.bib.replace(/^(@\w+\{)[^,]+/,`$1${key}`):r.bib;const next=prev.trimEnd()+'\n\n'+bib;
  await api(`/api/projects/${state.project.id}/file`,'PUT',{path:p,content:next});if(state.docs.has(p)){const old=state.docs.get(p);old.content=next;old.dirty=false;if(state.active===p){$('code-editor').value=next;renderCode()}}
- syncSaveIndicator();toast('Referensi '+key+' ditambahkan ke references.bib.');await openFile(p);await reloadTree();}catch(e){toast(e.message,true)}}
-async function lookupDoi(){const q=$('doi-input').value.trim();if(!q)return toast('Masukkan DOI.',true);$('ref-results').innerHTML='<div class="empty-mini">Mengambil metadata dari Crossref...</div>';try{const r=await api('/api/doi?doi='+encodeURIComponent(q));renderRefs([r]);}catch(e){$('ref-results').innerHTML='';toast(e.message,true)}}
-async function searchRefs(){const q=$('ref-search').value.trim();if(q.length<3)return toast('Kata kunci minimal 3 karakter.',true);$('ref-results').innerHTML='<div class="empty-mini">Mencari publikasi di Crossref...</div>';try{renderRefs(await api('/api/search?q='+encodeURIComponent(q)));}catch(e){$('ref-results').innerHTML='';toast(e.message,true)}}
+ syncSaveIndicator();toast('Referensi '+key+' ditambahkan ke references.bib.');if(!options.keepEditor)await openFile(p);await reloadTree();return key;}catch(e){toast(e.message,true);throw e;}}
 function bibliographyEntries(content){
  let result=[],rx=/@([A-Za-z]+)\s*\{\s*([^,\s]+)\s*,/g,m;
  while((m=rx.exec(content))){let depth=1,i=rx.lastIndex;
@@ -338,7 +335,7 @@ async function updateBibOnline(){
   const entries=bibliographyEntries(doc.content);if(!entries.length)return toast('Belum ada entri dengan DOI di references.bib.',true);
   if(entries.length>20)return toast('Maksimal 20 entri DOI per pembaruan. Bagi referensi ke beberapa file.',true);
   if(!confirm(`Perbarui ${entries.length} entri DOI dari Crossref? Metadata lama akan diganti. File lama dibackup oleh server.`))return;
-  $('ref-results').innerHTML='<div class="empty-mini">Memperbarui metadata dari Crossref...</div>';
+  toast('Memperbarui metadata dari Crossref...');
   let next=doc.content,okay=0,failed=[];
   for(const entry of entries.slice().reverse()){
    try{const meta=await api('/api/doi?doi='+encodeURIComponent(entry.doi));
@@ -347,12 +344,11 @@ async function updateBibOnline(){
    }catch(e){failed.push(entry.doi);}
   }
   if(okay){await api(`/api/projects/${state.project.id}/file`,'PUT',{path:p,content:next});if(state.docs.has(p)){const d=state.docs.get(p);d.content=next;d.dirty=false;if(state.active===p){$('code-editor').value=next;renderCode()}}syncSaveIndicator();}
-  $('ref-results').innerHTML=`<div class="empty-mini">Selesai: ${okay} referensi diperbarui; ${failed.length} gagal.${failed.length?' Coba ulangi saat koneksi internet stabil.':''}</div>`;
+  
   toast(`${okay} metadata DOI berhasil diperbarui${failed.length?' ('+failed.length+' gagal)':''}.`,!!failed.length);
  }catch(e){toast(e.message,true)}
 }
-$('ref-update-existing').onclick=updateBibOnline;
-$('doi-lookup').onclick=lookupDoi;$('doi-input').onkeydown=e=>{if(e.key==='Enter')lookupDoi()};$('ref-search-btn').onclick=searchRefs;$('ref-search').onkeydown=e=>{if(e.key==='Enter')searchRefs()};
+
 async function init(){
  renderSnippets();showDashboard();
  try{
@@ -424,3 +420,13 @@ function openConverter(){
  };
 }
 $('convert-open').onclick=openConverter;
+
+// Reference search UI integration. The dedicated popup lives in reference-ui.js.
+window.EKTeXReferenceBridge={api,toast,getProject:()=>state.project,getActive:()=>state.active,getText:()=>$('code-editor').value,getTitle:()=>{const code=$('code-editor').value;const title=code.match(/\\title(?:\[[^\]]*\])?\{([^}]{3,240})\}/);return title?.[1]||state.config?.name||state.project?.name||''},addBib,saveAll,updateBibOnline,insertCitation:(context,key)=>{
+ if(!context||!key||!state.project||state.project.id!==context.project||state.active!==context.file)return false;
+ const editor=$('code-editor');const content=editor.value;
+ if(content!==context.source||content.slice(context.start,context.end)!==context.text)return false;
+ const inserted=' \\cite{'+key+'}';const pos=context.end;
+ editor.value=content.slice(0,pos)+inserted+content.slice(pos);editor.selectionStart=editor.selectionEnd=pos+inserted.length;
+ editor.dispatchEvent(new Event('input',{bubbles:true}));renderCode();return true;
+}};

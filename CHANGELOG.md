@@ -1,24 +1,20 @@
 # Changelog
 
-## 2.7.0 — Editor Assistance & Themes (2026-10-29)
+## 2.8.0 — Reference Discovery and Academic Search
 
-- Menambahkan autocomplete perintah LaTeX setelah karakter `\\` dengan pilihan berbasis keyboard/mouse dan template yang menempatkan kursor secara otomatis.
-- Menambahkan highlight merah di kode dan gutter untuk kesalahan kompilasi yang menyertakan nama file dan nomor baris.
-- Memperbarui navigasi diagnostik: klik pesan error untuk membuka file dan berpindah ke baris terkait.
-- Menyediakan empat palet tema (Emerald, Ocean Blue, Amethyst, Copper), masing-masing tersedia dalam mode Dark dan Light.
-- Menyimpan preferensi tema di browser, tersedia dari halaman dashboard maupun editor.
-- Menambah pengujian fitur editor dan memperbarui README instalasi/pembaruan.
+- Replaced the legacy references sidebar form with a dedicated reference search popup, available from dashboard, toolbar, and references rail icon.
+- The reference popup remains open on backdrop clicks and Escape; only its X button dismisses it.
+- Added separate title, author, and DOI inputs. Title and author queries use appropriate Crossref metadata search fields.
+- Added contextual **Cari Referensi** action for selected LaTeX text and study-title-aware keyword suggestions.
+- Integrated optional Hermes Agent for read-only keyword suggestions and an offline lexical fallback when Hermes is unavailable.
+- Added user-editable keyword query, safe BibTeX saving, and optional citation insertion without changing the active source tab.
+- Added release documentation with developer logo, screenshots, table of contents, installation and update instructions, and official EK Instrumentation website.
+- Extended automated tests for reference search and keyword extraction routes.
 
-## 2.6.0 — Project Workflow
+## 2.7.0 — Smart Editor and Themes
 
-- Dashboard proyek berbentuk daftar dengan rename/delete dan ringkasan compact.
-- Konverter dokumen menghasilkan proyek LaTeX baru tanpa mencampurkan hasilnya dengan proyek terbuka.
-- Compile mengikuti tab `.tex` yang aktif dan pratinjau PDF terkait.
+- LaTeX autocomplete with keyboard navigation.
+- Highlighting compiler errors in source lines and line number gutter.
+- Four theme palettes, each with light and dark modes.
 
-## 2.5.1 — Nested AUX Directories
-
-- Menyiapkan direktori `.latexstudio-build` sebelum compile biasa dan sesudah Clean & Recompile agar `\\include` bersubfolder dapat menulis `.aux`.
-
-## 2.5.0 — Debugging & Converter
-
-- Integrasi Hermes Agent opsional, debugger offline, dan konversi dengan Pandoc.
+Earlier features preserved: project management, active-file compilation, Hermes debugger, Pandoc converters, include AUX directory preparation and safe project backups.
