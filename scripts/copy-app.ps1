@@ -20,12 +20,11 @@ function Copy-EKTexApp {
 
     New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
     $files = @(
-        'server.js', 'package.json', 'README.md', 'INSTALL-DI-LAPTOP-LAIN.md',
-        'PUSH-KE-GITHUB.md', 'BRANDING-UPDATE.md', 'CHANGELOG.md', 'UPDATE-KE-v2.3.md', '.gitignore', '.gitattributes',
+        'server.js', 'package.json', 'README.md', 'CHANGELOG.md', '.gitignore', '.gitattributes',
         'install-windows.ps1', 'install-windows.bat', 'start-windows.bat',
         'setup-windows.ps1', 'run-windows.ps1', 'run-windows.cmd',
         'install-from-github.ps1', 'update-windows.cmd',
-        'setup-linux.sh', 'start-linux.sh'
+        'setup-linux.sh', 'start-linux.sh', 'update-linux.sh'
     )
     foreach ($file in $files) {
         $from = Join-Path $SourceDir $file

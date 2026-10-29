@@ -19,5 +19,6 @@ jobs:
           node --check public/app.js
           node --check scripts/verify-compiler.js
           node --check tests/smoke.js
+          node --check tests/compile.js
       - name: Run local API smoke test
         run: npm test

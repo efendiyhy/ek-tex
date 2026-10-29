@@ -42,7 +42,7 @@ try {
     if ($directories.Count -ne 1) { throw 'Arsip source tidak sesuai.' }
     $source = $directories[0].FullName
     if (-not (Test-Path -LiteralPath (Join-Path $source 'scripts\copy-app.ps1'))) {
-        throw 'Installer repository belum diperbarui. Pastikan EK TeX versi 2.3 sudah di-push.'
+        throw 'Installer repository belum diperbarui. Pastikan repository EK TeX memiliki installer terbaru.'
     }
     . (Join-Path $source 'scripts\copy-app.ps1')
     Copy-EKTexApp -SourceDir $source -TargetDir $InstallDir

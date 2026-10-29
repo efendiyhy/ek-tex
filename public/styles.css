@@ -64,3 +64,15 @@
 @media(max-width:1050px){.brand{min-width:188px}}
 @media(max-width:850px){.brand{min-width:auto}.brandname small{font-size:7px;letter-spacing:.8px}.bottom-developer,.bottom-developer-divider{display:none}}
 @media(max-width:800px){.brandname{display:none}}
+
+/* EK TeX v2.4: compile controls, progress and actionable diagnostics */
+.pdf-toolbar .clean-btn{white-space:nowrap;font-size:11px;padding:8px 10px;background:#1c2c46;color:#dce9fa;border:1px solid #354963;border-radius:7px}
+.pdf-toolbar .clean-btn:hover{background:#273c5b}
+.pdf-toolbar .stop-btn{background:#672a34;color:#ffe0e4;border:1px solid #9c4b5b;padding:8px 10px;border-radius:7px;white-space:nowrap}
+.build-summary{padding:11px 13px;background:#35212a;border-bottom:1px solid #9c4b5b;color:#ffe1e4;line-height:1.45}
+.build-summary>strong{display:block;font-weight:650;margin-bottom:7px}
+.diagnostic-list{display:flex;flex-direction:column;gap:4px;max-height:136px;overflow:auto}
+.diagnostic-item{text-align:left;display:block;width:100%;background:rgba(255,255,255,.06);border:0;border-radius:5px;color:#ffe1e4;padding:6px 8px;font-family:monospace;font-size:11px;overflow-wrap:anywhere}
+.diagnostic-item:not(:disabled):hover{background:rgba(255,255,255,.14);cursor:pointer}
+.diagnostic-item:disabled{cursor:default;opacity:.9}
+@media(max-width:1150px){.pdf-toolbar .clean-btn{font-size:0;padding:8px 11px}.pdf-toolbar .clean-btn::after{content:'Clean';font-size:11px}}

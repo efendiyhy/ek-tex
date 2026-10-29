@@ -126,11 +126,51 @@ $('toggle-console').onclick=()=>toggleConsole();$('close-console').onclick=()=>t
 function refreshPdf(){if(!state.project)return;$('pdf-frame').src=`/api/projects/${state.project.id}/pdf?t=${Date.now()}#toolbar=1&navpanes=0`;$('pdf-frame').classList.remove('hidden');$('pdf-empty').classList.add('hidden');state.preview=true;$('preview-version').textContent='PDF terbaru';}
 $('refresh-pdf').onclick=()=>{if(state.preview)refreshPdf();else toast('Compile dokumen terlebih dahulu.')};
 $('download-pdf').onclick=()=>{if(!state.preview)return toast('Belum ada PDF untuk dibuka.',true);const a=document.createElement('a');a.href=`/api/projects/${state.project.id}/pdf`;a.download='output.pdf';a.click()};
-async function buildPdf(){if(state.build||!state.project)return;state.build=true;const btn=$('compile');btn.disabled=true;$('compile-label').textContent='Compiling...';$('preview-version').textContent='Compiling';try{await saveAll();const result=await api(`/api/projects/${state.project.id}/build`,'POST',{engine:$('engine').value});state.log=result.log||'';$('log-text').textContent=state.log||'(Tidak ada output)';
- if(result.ok){refreshPdf();$('preview-version').textContent='Built '+new Date().toLocaleTimeString('id-ID');toast('Kompilasi berhasil. PDF diperbarui.');statusText('Build success');}
- else {toggleConsole(true);$('preview-version').textContent='Compilation failed';toast('Kompilasi gagal — periksa log.',true);statusText('Build error');}
- }catch(e){state.log=e.message;$('log-text').textContent=e.message;toggleConsole(true);toast(e.message,true);$('preview-version').textContent='Compiler error';}finally{state.build=false;btn.disabled=false;$('compile-label').textContent='Compile'}}
-$('compile').onclick=buildPdf;
+function renderBuildSummary(result){
+ const node=$('build-summary');node.innerHTML='';
+ const diagnostics=result.diagnostics||[];
+ if(result.ok){node.classList.add('hidden');return;}
+ node.classList.remove('hidden');
+ const headline=document.createElement('strong');headline.textContent=result.summary||'Kompilasi gagal';node.append(headline);
+ if(diagnostics.length){
+  const list=document.createElement('div');list.className='diagnostic-list';
+  for(const d of diagnostics.slice(0,8)){
+   const file=String(d.file||''),line=Number(d.line||0),entry=document.createElement('button');entry.type='button';entry.className='diagnostic-item';
+   const prefix=file?(file+(line?':'+line:'')):'LaTeX';entry.textContent=prefix+' — '+d.message;
+   if(file){entry.title='Buka file dan lompat ke lokasi error';entry.onclick=async()=>{try{await openFile(file);if(line>0){const editor=$('code-editor'),rows=editor.value.split('\n');let pos=0;for(let i=0;i<Math.min(line-1,rows.length);i++)pos+=rows[i].length+1;editor.focus();editor.setSelectionRange(pos,pos);editor.scrollTop=Math.max(0,(line-8)*19);updateCursor();}}catch(e){toast('Tidak dapat membuka '+file+': '+e.message,true)}};}
+   else entry.disabled=true;
+   list.append(entry);
+  }
+  node.append(list);
+ }
+}
+async function buildPdf(clean=false){
+ if(state.build||!state.project)return;
+ state.build=true;
+ const projectId=state.project.id,btn=$('compile'),cleanBtn=$('clean-compile'),stopBtn=$('stop-compile');
+ btn.disabled=true;cleanBtn.disabled=true;stopBtn.classList.remove('hidden');stopBtn.disabled=false;
+ $('compile-label').textContent='Compiling...';$('preview-version').textContent=clean?'Cleaning & compiling':'Compiling';
+ $('build-summary').classList.add('hidden');state.log='';$('log-text').textContent='Memulai kompilasi...';toggleConsole(true);
+ let interval;
+ try{
+  await saveAll();
+  const update=async()=>{try{
+   const progress=await api(`/api/projects/${projectId}/build/status`);
+   if(progress.log!==undefined&&progress.log!==state.log){state.log=progress.log;$('log-text').textContent=state.log||'Memulai kompilasi...';}
+  }catch{}};
+  // Start HTTP request without awaiting so status polling can display the compiler output live.
+  const pending=api(`/api/projects/${projectId}/build`,'POST',{engine:$('engine').value,clean});
+  interval=setInterval(update,900);await update();
+  const result=await pending;
+  state.log=result.log||'';$('log-text').textContent=state.log||'(Tidak ada output)';renderBuildSummary(result);
+  if(result.ok){refreshPdf();$('preview-version').textContent='Built '+new Date().toLocaleTimeString('id-ID');toast(clean?'Clean & Recompile berhasil.':'Kompilasi berhasil. PDF diperbarui.');statusText('Build success');}
+  else {toggleConsole(true);$('preview-version').textContent=result.pdfExists?'Build failed (PDF lama)':'Compilation failed';toast(result.summary||'Kompilasi gagal — periksa error.',true);statusText('Build error');}
+ }catch(e){state.log=e.message;$('log-text').textContent=e.message;renderBuildSummary({summary:e.message});toggleConsole(true);toast(e.message,true);$('preview-version').textContent='Compiler error';}
+ finally{clearInterval(interval);state.build=false;btn.disabled=false;cleanBtn.disabled=false;stopBtn.classList.add('hidden');$('compile-label').textContent='Compile';}
+}
+$('compile').onclick=()=>buildPdf(false);
+$('clean-compile').onclick=()=>buildPdf(true);
+$('stop-compile').onclick=async()=>{if(!state.build||!state.project)return;try{$('stop-compile').disabled=true;await api(`/api/projects/${state.project.id}/build/stop`,'POST');toast('Permintaan berhenti dikirim.')}catch(e){toast(e.message,true);$('stop-compile').disabled=false}};
 $('engine').onchange=async()=>{if(!state.project)return;try{state.config=await api(`/api/projects/${state.project.id}/config`,'PATCH',{engine:$('engine').value});toast('Compiler: '+$('engine').selectedOptions[0].textContent)}catch(e){toast(e.message,true)}};
 function newProjectDialog(){state.selectedTemplate='article';const templates=[['article','Article','Makalah & jurnal'],['report','Report','Laporan ilmiah'],['thesis','Thesis','Tesis / disertasi'],['beamer','Beamer','Slide presentasi'],['blank','Blank','File kosong']];
  modal('Buat proyek LaTeX',`<label>Nama proyek</label><input id="new-project-name" value="Proyek Penelitian" maxlength="100" placeholder="Nama proyek"><label>Template dokumen</label><div class="template-grid">${templates.map(([id,name,desc])=>`<button class="template-item ${id==='article'?'selected':''}" data-template="${id}"><strong>${name}</strong><span>${desc}</span></button>`).join('')}</div>`,modalButtons('Buat proyek'),'NEW PROJECT');

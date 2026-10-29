@@ -75,27 +75,106 @@ function tree(dir,relative='',depth=0){
  }).filter(Boolean).sort((a,b)=>Number(b.type==='folder')-Number(a.type==='folder')||a.name.localeCompare(b.name));
 }
 function commandAvailable(cmd){try{const r=spawnSync(cmd,['-version'],{timeout:5500,encoding:'utf8',windowsHide:true});return !r.error&&r.status===0;}catch{return false;}}
-let building=new Set();
-function compile(dir,engine,main){return new Promise((resolve)=>{
- const id=path.basename(dir);if(building.has(id))return resolve({ok:false,log:'Proyek sedang dikompilasi.',busy:true});
- building.add(id);const out=path.join(dir,'.latexstudio-build');fs.mkdirSync(out,{recursive:true});
+// One job per project. /build/status exposes progress without waiting for the POST response.
+const buildJobs=new Map();
+const BUILD_TIMEOUT_MS=120000;
+const MAX_BUILD_LOG=700000;
+function removeBuildCache(dir){
+ const out=path.join(dir,'.latexstudio-build');
+ if(fs.existsSync(out)){
+  if(fs.lstatSync(out).isSymbolicLink())throw fail(400,'Folder cache build tidak boleh berupa symlink.');
+  fs.rmSync(out,{recursive:true,force:true});
+ }
+ fs.mkdirSync(out,{recursive:true});
+ return out;
+}
+function appendBuildLog(job,content){
+ const str=String(content);
+ if(job.log.length>=MAX_BUILD_LOG){if(!job.logTruncated){job.log+='\n[Log terlalu panjang; output selanjutnya tidak ditampilkan.]\n';job.logTruncated=true;}return;}
+ job.log+=str.slice(0,MAX_BUILD_LOG-job.log.length);
+}
+function latexDiagnostics(dir,main,log){
+ const logfile=path.join(dir,'.latexstudio-build',path.basename(main,'.tex')+'.log');
+ let source=log;
+ try{if(fs.existsSync(logfile))source+='\n'+fs.readFileSync(logfile,'utf8').slice(-500000)}catch{}
+ const lines=source.split(/\r?\n/),diagnostics=[],seen=new Set();
+ for(let i=0;i<lines.length&&diagnostics.length<12;i++){
+  const line=lines[i].trim();let file='',number=null,message='';
+  let m=line.match(/^(.+?\.tex):(\d+):\s*(.+)$/i);
+  if(m){file=m[1].replace(/^\.\//,'');number=Number(m[2]);message=m[3];}
+  else if(/^!\s+/.test(line))message=line.replace(/^!\s+/, '');
+  else if(/^(?:LaTeX|Package [\w-]+|Class [\w-]+) Error:/.test(line))message=line;
+  else if(/^(?:Emergency stop|Fatal error occurred)/i.test(line))message=line;
+  if(!message||/^==>/.test(message))continue;
+  // Ignore generic latexmk cache-history messages; they are not the underlying LaTeX error.
+  if(/gave an error in previous invocation/i.test(message))continue;
+  const key=file+':'+number+':'+message;
+  if(seen.has(key))continue;seen.add(key);
+  // Only allow navigation to project-relative sources (not TeX system paths).
+  const navFile=file&&!path.isAbsolute(file)&&!file.includes('..')&&!file.includes('\\')?file:'';
+  diagnostics.push({file:navFile,line:number,message:message.slice(0,400)});
+ }
+ return diagnostics;
+}
+function stopBuildJob(job,reason){
+ if(!job?.running||!job.child)return false;
+ if(reason==='user')job.stopped=true;
+ if(reason==='timeout')job.timedOut=true;
+ try{
+  if(process.platform==='win32'){
+   // latexmk starts child compiler processes: terminate the full Windows process tree.
+   spawn('taskkill',['/PID',String(job.child.pid),'/T','/F'],{windowsHide:true}).on('error',()=>{try{job.child.kill()}catch{}});
+  }else{
+   // Compiler and its children share a detached process group.
+   try{process.kill(-job.child.pid,'SIGTERM')}catch{job.child.kill('SIGTERM')}
+   const pid=job.child.pid;
+   const force=setTimeout(()=>{if(job.child?.pid===pid){try{process.kill(-pid,'SIGKILL')}catch{}}},3000);force.unref();
+  }
+ }catch{try{job.child.kill()}catch{}}
+ return true;
+}
+function compileAttempt(job,dir,engine,main){return new Promise(resolve=>{
+ const out=path.join(dir,'.latexstudio-build');
  const args=['-'+({pdf:'pdf',xelatex:'xelatex',lualatex:'lualatex'}[engine]||'pdf'),'-interaction=nonstopmode','-file-line-error','-halt-on-error','-no-shell-escape','-outdir='+out,'-cd',main];
- const logParts=[];let didTimeout=false,tooMuch=false;
- let child;
- try{child=spawn('latexmk',args,{cwd:dir,shell:false,windowsHide:true,env:{...process.env, max_print_line:'1200'}})}
- catch(e){building.delete(id);return resolve({ok:false,log:e.message});}
- const timer=setTimeout(()=>{didTimeout=true;child.kill();},120000);
- const collect=(d)=>{let size=logParts.reduce((n,b)=>n+b.length,0);if(size<900000){let s=d.toString('utf8');logParts.push(s.slice(0,900000-size));}else tooMuch=true;};
+ let child,spawnError='';
+ try{child=spawn('latexmk',args,{cwd:dir,shell:false,windowsHide:true,detached:process.platform!=='win32',env:{...process.env,max_print_line:'1200'}})}
+ catch(e){appendBuildLog(job,'Gagal menjalankan latexmk: '+e.message+'\n');return resolve(-1)}
+ job.child=child;
+ const timer=setTimeout(()=>{appendBuildLog(job,'\n[Batas waktu 120 detik tercapai, menghentikan compiler.]\n');stopBuildJob(job,'timeout');},BUILD_TIMEOUT_MS);
+ const collect=data=>appendBuildLog(job,data.toString('utf8'));
  child.stdout.on('data',collect);child.stderr.on('data',collect);
- child.on('error',e=>collect(Buffer.from('Gagal menjalankan latexmk: '+e.message+'\n')));
- child.on('close',code=>{
- clearTimeout(timer);building.delete(id);
- const log=logParts.join('')+(tooMuch?'\n[Output terpotong]':'')+(didTimeout?'\n[Timeout: proses dihentikan setelah 120 detik]':'');
- fs.writeFileSync(path.join(out,'build.log'),log);
- const base=path.basename(main,'.tex');const pdf=path.join(out,base+'.pdf');
- resolve({ok:code===0&&fs.existsSync(pdf),exitCode:code,log,pdfExists:fs.existsSync(pdf),timestamp:Date.now()});
- });
- });}
+ child.on('error',e=>{spawnError=e.message;appendBuildLog(job,'\nGagal menjalankan latexmk: '+e.message+'\n')});
+ child.on('close',(code)=>{clearTimeout(timer);job.child=null;resolve(spawnError?-1:code??-1)});
+});}
+async function compile(dir,engine,main,clean=false){
+ const id=path.basename(dir),previous=buildJobs.get(id);
+ if(previous?.running)return {ok:false,log:'Proyek sedang dikompilasi.',busy:true};
+ const job={running:true,log:'',logTruncated:false,child:null,stopped:false,timedOut:false,startedAt:Date.now(),mode:clean?'clean':'normal'};
+ buildJobs.set(id,job);
+ try{
+  if(clean){removeBuildCache(dir);appendBuildLog(job,'[Clean & Recompile] Cache build lama dihapus. File sumber tetap aman.\n\n');}
+  else{
+   const out=path.join(dir,'.latexstudio-build');
+   if(fs.existsSync(out)&&fs.lstatSync(out).isSymbolicLink())throw fail(400,'Folder cache build tidak boleh berupa symlink.');
+   fs.mkdirSync(out,{recursive:true});
+  }
+  let code=await compileAttempt(job,dir,engine,main);
+  // When latexmk only remembers a previous failed invocation, retry once from a clean cache.
+  const stale=code!==0&&!job.stopped&&!job.timedOut&&/Nothing to do for/i.test(job.log)&&/gave an error in previous invocation/i.test(job.log);
+  if(stale){
+   appendBuildLog(job,'\n[EK TeX] Error build lama terdeteksi. Membersihkan cache dan mengompilasi ulang otomatis.\n\n');
+   removeBuildCache(dir);
+   code=await compileAttempt(job,dir,engine,main);
+  }
+  const out=path.join(dir,'.latexstudio-build'),pdf=path.join(out,path.basename(main,'.tex')+'.pdf');
+  const diagnostics=latexDiagnostics(dir,main,job.log);
+  const ok=code===0&&!job.stopped&&!job.timedOut&&fs.existsSync(pdf);
+  const summary=job.stopped?'Kompilasi dihentikan oleh pengguna.':job.timedOut?'Kompilasi melebihi 120 detik dan dihentikan.':ok?'Kompilasi berhasil.':diagnostics.length?diagnostics[0].message:'Kompilasi gagal. Periksa log untuk mencari penyebabnya.';
+  const result={ok,exitCode:code,log:job.log,diagnostics,summary,pdfExists:fs.existsSync(pdf),timestamp:Date.now(),autoCleaned:stale,clean};
+  job.result=result;return result;
+ }catch(e){appendBuildLog(job,'\n[EK TeX] '+e.message+'\n');const result={ok:false,log:job.log,summary:e.message,diagnostics:[],pdfExists:false};job.result=result;return result;}
+ finally{job.running=false;job.child=null;try{fs.writeFileSync(path.join(dir,'.latexstudio-build','build.log'),job.log)}catch{}}
+}
 function httpsJson(url){return new Promise((resolve,reject)=>{
  const req=https.get(url,{headers:{'Accept':'application/json','User-Agent':'LaTeXStudioLocal/1.0 (local research editor)'},timeout:14000},res=>{
   if(res.statusCode!==200){res.resume();return reject(fail(502,'Crossref memberikan respons HTTP '+res.statusCode));}
@@ -207,6 +286,13 @@ async function router(req,res){
    if(!/^10\.\d{4,9}\/\S{1,200}$/i.test(doi))throw fail(400,'Format DOI tidak valid.');
    const data=await httpsJson('https://api.crossref.org/works/'+encodeURIComponent(doi));return json(res,crossrefBib(data.message));
  }
+ const control=p.match(/^\/api\/projects\/([a-z0-9_-]+)\/build\/(status|stop)$/);
+ if(control){
+  const dir=safeProject(control[1]),job=buildJobs.get(path.basename(dir));
+  if(control[2]==='status'&&method==='GET')return json(res,job?{running:job.running,log:job.log,startedAt:job.startedAt,summary:job.result?.summary||null,diagnostics:job.result?.diagnostics||[],stopped:job.stopped,timedOut:job.timedOut}:{running:false,log:'',summary:null,diagnostics:[]});
+  if(control[2]==='stop'&&method==='POST')return json(res,{stopping:stopBuildJob(job,'user')});
+  throw fail(405,'Metode tidak didukung.');
+ }
  const m=p.match(/^\/api\/projects\/([a-z0-9_-]+)(?:\/(tree|file|upload|build|pdf|export|config))?$/);
  if(m){const id=m[1],route=m[2]||'',dir=safeProject(id);
   if(route==='tree'&&method==='GET')return json(res,tree(dir));
@@ -259,7 +345,7 @@ async function router(req,res){
    if(!fs.existsSync(main)||path.extname(main)!=='.tex')throw fail(400,'Main .tex tidak ditemukan.');
    if(!['pdf','xelatex','lualatex'].includes(engine))throw fail(400,'Engine tidak valid.');
    if(!commandAvailable('latexmk'))throw fail(422,'latexmk belum siap. Tutup server lalu jalankan install-windows.bat (Windows) atau start-linux.sh (Linux) untuk setup otomatis.');
-   return json(res,await compile(dir,engine,cfg.main));
+   return json(res,await compile(dir,engine,cfg.main,d.clean===true));
   }
   if(route==='pdf'&&(method==='GET'||method==='HEAD')){
    let cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));

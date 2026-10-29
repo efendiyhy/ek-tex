@@ -25,4 +25,5 @@ assert.doesNotMatch(copy, /Copy-Item[^\n]*workspace/);
 assert.doesNotMatch(copy, /Remove-Item/);
 assert.match(installer, /EK TeX\.lnk/);
 assert.match(updater, /-NoLaunch/);
+assert.match(read('update-linux.sh'), /git pull --ff-only origin main/);
 console.log('[PASS] Installer defaults, fixed GitHub source, Documents path, and workspace protection');
