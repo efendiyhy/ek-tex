@@ -6,6 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="/cat-logo.svg">
 <link rel="alternate icon" type="image/png" href="/favicon.png">
 <link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/editor-features.css">
 </head>
 <body>
 <div id="app">
@@ -22,8 +23,8 @@
 </header>
 <section class="dashboard" id="dashboard" aria-label="Daftar proyek LaTeX">
   <div class="dash-shell">
-    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.6</div>
-    <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
+    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.7</div>
+    <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-settings" title="Pengaturan tema dan tampilan">⚙ Pengaturan</button><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
     <div class="dash-overview"><div class="dash-stat"><span>PROYEK</span><strong id="dash-count">0</strong><small>tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Pemeriksaan awal</small></div><div class="dash-stat dash-stat-side"><span>IMPOR</span><button id="dashboard-import" class="dash-quick">⇧ Proyek ZIP <span>↗</span></button><small>Overleaf atau ZIP lokal</small></div></div>
     <div class="dash-library-head"><div><h2>Proyek saya</h2><span id="dash-subtitle">Semua proyek</span></div><label class="dash-search">⌕ <input id="dashboard-search" type="search" placeholder="Cari nama proyek..." aria-label="Cari proyek"></label></div>
     <div class="dash-list-head" aria-hidden="true"><span>PROYEK</span><span>FILE UTAMA</span><span>TERAKHIR DIUBAH</span><span>AKSI</span></div><div id="dashboard-projects" class="dash-list"></div>
@@ -81,7 +82,7 @@
   <div class="editor-top"><div class="tabs" id="tabs"></div><div class="tab-actions"><button id="toggle-console" class="tab-act" title="Log hasil kompilasi">≡</button></div></div>
   <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari di file (Ctrl+F)">⌕ Find</button><span class="vline"></span><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
   <div class="findbar hidden" id="findbar"><input id="find-input" placeholder="Cari di dokumen..."/><span id="find-count"></span><button id="find-next" class="mini-btn">↓</button><button id="find-close" class="mini-btn">✕</button></div>
-  <div class="editor-surface"><div class="line-numbers" id="line-numbers">1</div><div class="code-container"><pre id="syntax-layer" aria-hidden="true"></pre><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="LaTeX source code"></textarea></div></div>
+  <div class="editor-surface"><div class="line-numbers" id="line-numbers" aria-label="Nomor baris">1</div><div class="code-container"><pre id="syntax-layer" aria-hidden="true"></pre><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="LaTeX source code" aria-autocomplete="list" aria-controls="latex-suggestions"></textarea><div id="latex-suggestions" class="latex-suggestions hidden" role="listbox" aria-label="Saran perintah LaTeX"></div></div></div>
   <div class="editor-status"><span id="cursor-position">Ln 1, Col 1</span><span class="divider-small"></span><span id="file-type">LaTeX</span><div class="grow"></div><span>UTF-8</span><span class="divider-small"></span><span>Spaces: 2</span><span class="divider-small"></span><span id="file-status">Ready</span></div>
   <div class="console hidden" id="console"><div class="console-head"><strong>OUTPUT · COMPILE LOG</strong><div><button id="open-debugger" title="Analisis log">⚑ Debug</button><button id="copy-log" title="Salin log">Copy</button><button id="close-console" title="Tutup">✕</button></div></div><div id="build-summary" class="build-summary hidden" aria-live="polite"></div><pre id="log-text">Belum ada log kompilasi.</pre></div>
  </main>
@@ -92,10 +93,11 @@
   <div class="preview-footer"><span><i class="footer-dot"></i> Local rendering</span><button id="preview-help">Panduan PDF ↗</button></div>
  </section>
 </div>
-<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> LaTeXStudio Local <span style="opacity:.6">v2.5</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
+<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v2.7</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
 </div>
 <div id="overlay" class="overlay hidden"><div class="dialog" role="dialog" aria-modal="true"><div class="dialog-header"><div><span id="dialog-kicker">LATEXSTUDIO</span><h2 id="dialog-title">Dialog</h2></div><button id="dialog-close" class="dialog-close">✕</button></div><div id="dialog-content"></div><div class="dialog-footer" id="dialog-footer"></div></div></div>
 <input type="file" id="convert-input" hidden accept=".docx,.odt,.md,.markdown,.html,.htm,.tex"><input type="file" id="zip-input" hidden accept=".zip,application/zip"><input type="file" id="file-input" hidden multiple accept=".tex,.bib,.sty,.cls,.txt,.csv,.json,.png,.jpg,.jpeg,.pdf,.svg,.eps,.webp,.bst,.def,.cfg,.dat,.md">
 <div id="toast" class="toast hidden"></div>
+<script src="/editor-features.js"></script>
 <script src="/app.js"></script>
 </body></html>

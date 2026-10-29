@@ -1,59 +1,43 @@
 # EK TeX
 
-**A local LaTeX workspace for academic writing**  
+**Local LaTeX Editor**  
 Developed by **EK Instrumentation**
 
-EK TeX adalah editor LaTeX berbasis browser yang berjalan di komputer pengguna. Proyek, naskah, bibliografi, dan hasil kompilasi disimpan secara lokal. Server hanya mendengarkan pada `127.0.0.1` dan tidak memerlukan akun cloud.
+EK TeX adalah editor LaTeX berbasis browser yang dijalankan di komputer sendiri. Aplikasi menyediakan manajemen proyek, editor multi-file, kompilasi PDF, navigasi error, pencarian referensi berbasis DOI, bantuan debugging opsional melalui Hermes Agent, serta konversi dokumen dengan Pandoc.
 
-![EK TeX](public/cat-logo.svg)
+Dokumen proyek disimpan secara lokal di `workspace/`. Akses internet diperlukan untuk instalasi dependensi dan fitur metadata referensi online; penyuntingan dan kompilasi dapat berjalan offline setelah dependensi lengkap tersedia.
 
-## Fitur
+## Fitur utama
 
 | Area | Kemampuan |
-| --- | --- |
-| Dashboard | Daftar proyek vertikal, pencarian, buat/import proyek, **Rename**, dan **Delete** dengan konfirmasi |
-| Editor | Multi-file `.tex`/`.bib`, autosave, backup, syntax highlighting, sidebar yang dapat disembunyikan |
-| Kompilasi | `latexmk` dengan pdfLaTeX, XeLaTeX, LuaLaTeX, log langsung, Stop, Clean & Recompile |
-| PDF | Preview hasil **file `.tex` yang sedang aktif**, bukan selalu `main.tex` |
-| Referensi | Pencarian Crossref, impor DOI, dan pembaruan metadata `.bib` |
-| Debugger | Diagnosis error LaTeX umum; Hermes Agent opsional dengan peninjauan diff sebelum perubahan diterapkan |
-| Konverter | DOCX, ODT, Markdown, HTML, LaTeX melalui Pandoc; **konversi ke `.tex` membuat proyek baru** |
-| Pertukaran proyek | Import/export ZIP proyek |
-
-### Perubahan v2.6
-
-- **Konversi terpisah.** Tombol **Konversi dokumen** tersedia di dashboard maupun sidebar editor. Hasil konversi menuju LaTeX selalu dibuat sebagai **proyek baru** dengan `converted.tex`, `references.bib`, dan folder `media/` bila diperlukan. Proyek yang sedang dibuka tidak ditambah atau ditimpa. Output DOCX, Markdown, dan HTML diunduh sebagai file.
-- **Pengelolaan proyek.** Dashboard menampilkan proyek sebagai daftar satu kolom, dengan aksi **Rename** dan **Delete** pada setiap baris. Rename mengubah nama tampilan, bukan ID atau lokasi folder proyek. Penghapusan mengharuskan pengguna mengetik ulang nama proyek dan menghapus seluruh isi folder proyek secara permanen. **Ekspor ZIP terlebih dahulu** untuk proyek yang perlu disimpan.
-- **Kompilasi tab aktif.** Saat menekan **Compile** atau **Clean & Recompile**, EK TeX mengompilasi file `.tex` pada tab editor aktif. Tab `.bib`/file non-TeX tidak dapat dikompilasi. Preview PDF dibatasi pada file yang benar-benar dikompilasi.
-- **Konsistensi build.** Saat berpindah target `.tex`, cache hasil kompilasi lama dibersihkan untuk menghindari PDF tertukar. Persiapan subfolder `.latexstudio-build/` untuk `\include{...}` tetap dilakukan sebelum setiap kompilasi.
-- **Ringkasan dashboard lebih ringkas.** Jumlah proyek, status compiler, dan pintasan impor diletakkan di bagian atas tanpa memenuhi ruang daftar proyek.
-
-> **File bab `.tex` yang hanya berisi isi bab, tanpa `\documentclass` dan `\begin{document}`, biasanya tidak dapat dikompilasi secara mandiri.** Buka file induk yang lengkap untuk mengompilasi seluruh tesis, atau beri file bab struktur LaTeX mandiri jika memang ingin membuat PDF terpisah. Pemilihan tab aktif tidak otomatis mengubah isi file atau menambahkan preamble.
+|---|---|
+| Workspace | Dashboard proyek berbentuk daftar, buat/rename/hapus proyek, impor dan ekspor ZIP |
+| Editor | Syntax highlighting, autosave, multi-tab, pencarian, snippet, sidebar yang dapat diminimalkan |
+| **Autocomplete LaTeX (v2.7)** | Saat mengetik `\`, tampilkan saran perintah; filter ketika nama perintah diketik; navigasi dengan panah dan Enter/Tab |
+| **Penanda error (v2.7)** | Baris sumber yang memiliki nomor error ditandai merah di kode dan gutter nomor baris; klik error di panel Output untuk membuka file terkait |
+| **Tema (v2.7)** | Empat palet: Emerald, Ocean Blue, Amethyst, Copper; tiap palet memiliki mode terang dan gelap; tersimpan per browser |
+| Kompilasi | pdfLaTeX, XeLaTeX, LuaLaTeX melalui `latexmk`, preview PDF, log langsung, Stop Compile, Clean & Recompile |
+| Bibliografi | Pencarian metadata online melalui Crossref, impor DOI ke BibTeX |
+| Debugging | Petunjuk kesalahan berbasis aturan dan integrasi Hermes Agent jika tersedia dan dikonfigurasi |
+| Converter | DOCX / ODT / Markdown / HTML → LaTeX melalui Pandoc; hasil LaTeX selalu menjadi **proyek baru** |
 
 ## Persyaratan
 
-- Node.js **18+**.
-- TeX Live (Linux) atau MiKTeX (Windows) dengan `latexmk` dan compiler yang digunakan.
-- Pandoc untuk konversi dokumen. Hermes Agent opsional untuk saran AI.
-- Internet saat memasang dependensi, memperbarui kode, atau memakai Crossref. Editor dan compiler lokal dapat digunakan offline setelah dependensi terpasang.
+- **Windows:** Windows 10/11, PowerShell, WinGet dan koneksi internet untuk setup awal. Installer menyiapkan Node.js, MiKTeX, Strawberry Perl dan `latexmk` jika diperlukan.
+- **Ubuntu/Debian:** Git, Node.js, TeX Live, `latexmk`, dan paket LaTeX yang dipakai dokumen. Setup Linux dapat membantu memasang dependensi melalui APT.
+- **Opsional:** Pandoc untuk konversi; Hermes Agent untuk saran perbaikan AI. Hermes harus sudah dikonfigurasi di komputer; EK TeX tidak menyertakan model atau akun AI.
 
 ## Instalasi Windows
 
-Jalankan PowerShell:
+Unduh source repository atau paket ZIP EK TeX, lalu ekstrak. Jalankan **`install-windows.bat`** dari direktori hasil ekstraksi.
 
-```powershell
-$setup = Join-Path $env:TEMP 'ek-tex-install.ps1'
-Invoke-WebRequest 'https://raw.githubusercontent.com/efendiyhy/ek-tex/main/install-from-github.ps1' -OutFile $setup
-powershell -NoProfile -ExecutionPolicy Bypass -File $setup
-```
+Installer menyalin aplikasi ke folder **Documents\EK-TeX**, menyiapkan dependensi, dan membuat shortcut Desktop/Start Menu. Gunakan shortcut tersebut untuk membuka aplikasi. Terminal server akan terlihat dan tetap aktif selama EK TeX digunakan; **Ctrl+C** menghentikan server.
 
-Alternatif: unduh repository dari [GitHub](https://github.com/efendiyhy/ek-tex) sebagai ZIP, ekstrak, kemudian jalankan `install-windows.bat`.
+Untuk menjalankan source tanpa memasang shortcut, gunakan `start-windows.bat`.
 
-Installer memasang aplikasi ke folder **Documents\EK-TeX** dan memeriksa dependensi yang dibutuhkan. Launcher membuat shortcut di Desktop dan Start Menu. Saat shortcut dijalankan, terminal server tetap terlihat. Tekan **Ctrl+C** pada terminal untuk menghentikan aplikasi.
+## Instalasi Ubuntu
 
-Instalasi pertama dapat memerlukan WinGet, internet, ruang disk yang cukup, serta konfirmasi izin administrator. Hermes tidak dipasang otomatis.
-
-## Instalasi Ubuntu / Debian
+Jalankan perintah berikut di Terminal:
 
 ```bash
 sudo apt update
@@ -62,26 +46,18 @@ mkdir -p ~/Documents
 cd ~/Documents
 git clone https://github.com/efendiyhy/ek-tex.git EK-TeX
 cd EK-TeX
-chmod +x start-linux.sh setup-linux.sh update-linux.sh
+chmod +x setup-linux.sh start-linux.sh update-linux.sh
+./setup-linux.sh --yes
 ./start-linux.sh
 ```
 
-Launcher akan memeriksa dependensi dan menawarkan instalasi melalui `apt` jika diperlukan. Untuk menjalankan kembali:
+Buka **http://127.0.0.1:3457** jika browser tidak terbuka otomatis. Hentikan server dengan **Ctrl+C**.
 
-```bash
-cd ~/Documents/EK-TeX
-./start-linux.sh
-```
+## Memperbarui aplikasi
 
-Buka **http://127.0.0.1:3457** pada browser. Server berjalan di terminal sampai Anda menekan **Ctrl+C**. Installer Linux saat ini tidak otomatis membuat shortcut Desktop.
+Hentikan server sebelum melakukan pembaruan. Proyek lokal berada di `workspace/` dan tidak dilacak Git; tetap buat cadangan proyek penting secara terpisah.
 
-## Cara memperbarui EK TeX
-
-**Selalu hentikan server (Ctrl+C) sebelum memperbarui.** Disarankan membuat cadangan folder `workspace/` untuk proyek penting.
-
-**Windows** — jalankan `update-windows.cmd` di folder `Documents\EK-TeX`. Setelah berhasil, buka kembali shortcut **EK TeX**. Script akan mengambil source terbaru dari repository resmi dan mempertahankan `workspace/`.
-
-**Ubuntu / Debian** — untuk instalasi melalui `git clone`:
+**Ubuntu (instalasi dari GitHub)**
 
 ```bash
 cd ~/Documents/EK-TeX
@@ -89,55 +65,60 @@ cd ~/Documents/EK-TeX
 ./start-linux.sh
 ```
 
-Updater Linux memakai `git pull --ff-only` dan akan berhenti jika source yang dilacak Git memiliki perubahan lokal, untuk menghindari penimpaan perubahan. Pada versi lama tanpa `update-linux.sh`, jalankan `git pull --ff-only origin main` sekali, lalu jalankan launcher.
+Atau gunakan `git pull --ff-only origin main` di folder repository sebelum menjalankan `./start-linux.sh`.
 
-**Instalasi manual dari ZIP** — unduh source baru dan perbarui hanya file program; **jangan hapus atau timpa `workspace/`**. Proyek yang telah disimpan tetap berada di sana. Pembaruan tidak memerlukan instalasi ulang LaTeX jika compiler sudah tersedia.
+**Windows**
 
-## Alur kerja
+Jalankan `update-windows.cmd` dari folder instalasi `Documents\EK-TeX`, kemudian jalankan shortcut EK TeX. Jika memperbarui source secara manual melalui ZIP, ekstrak paket *Update Only* ke folder repository source dan ganti file program yang lama, **bukan** folder `workspace/`.
 
-### Membuat dan mengelola proyek
+Jika perubahan CSS/JS tidak langsung terlihat, muat ulang browser dengan **Ctrl+Shift+R**.
 
-Pada dashboard, klik **Proyek baru** untuk memulai dari template Article, Report, Thesis, Beamer, atau Blank. Klik nama proyek pada daftar untuk masuk ke editor. Setiap baris memiliki tombol **Rename** dan **Delete**. Penghapusan bersifat permanen dan memerlukan konfirmasi nama proyek; ekspor ZIP dari editor terlebih dahulu jika ingin menyimpan arsip.
+## Penggunaan editor
 
-### Mengonversi dokumen
+1. Buka atau buat proyek dari dashboard.
+2. Pilih file `.tex` pada sidebar. **Compile menargetkan file `.tex` yang sedang aktif**, bukan selalu `main.tex`.
+3. Tekan **Ctrl+Enter** atau tombol Compile. Output PDF ditampilkan jika build berhasil.
+4. Saat mengetik `\` di file `.tex`, pilih saran perintah dengan **↑/↓** kemudian **Enter** atau **Tab**. Perintah seperti `\section{}` menempatkan kursor di dalam kurung kurawal.
+5. Bila build gagal dan `latexmk` melaporkan file serta nomor baris, baris bermasalah akan berwarna merah pada editor dan gutter. Klik entri error di panel **Output** untuk berpindah ke file/baris terkait.
+6. Untuk mengganti tampilan, buka **Pengaturan** dari dashboard atau ikon roda gigi di editor. Pilih palet dan mode terang/gelap. Preferensi tersimpan di browser masing-masing.
 
-Klik **Konversi dokumen** pada dashboard atau **✦ Debug & Convert → Konversi ke proyek baru** dalam editor. Pilih input DOCX/ODT/Markdown/HTML/LaTeX dan output:
+### Batasan diagnostik
 
-- **LaTeX (.tex):** menghasilkan proyek baru dengan file `converted.tex`, file `.bib` awal, dan media yang diekstrak bila ada. Nama proyek bisa ditentukan sebelum konversi.
-- **Word (.docx), Markdown (.md), HTML (.html):** menghasilkan file unduhan, tanpa mengubah proyek mana pun.
+Penandaan baris memerlukan lokasi file dan nomor baris yang berhasil diidentifikasi dari log LaTeX. Beberapa kesalahan (misalnya paket `.sty` tidak ditemukan) tidak selalu menyertakan lokasi yang dapat ditandai. Dalam kasus tersebut, gunakan pesan di Output atau Debugger. Penanda berasal dari hasil kompilasi terakhir dan akan diperbarui pada compile berikutnya.
 
-Pandoc tidak menjamin hasil konversi identik dengan tampilan Word, khususnya untuk persamaan kompleks, referensi, tabel, dan gambar. Tinjau hasil sebelum publikasi.
+### File bab dan `\include`
 
-### Mengompilasi file `.tex`
+Sebelum setiap compile, EK TeX menyiapkan subfolder `.latexstudio-build` sesuai struktur sumber untuk mendukung file `.aux` dari `\include{Isi/Bab1}`. *Clean & Recompile* menyiapkan kembali subfolder tersebut sesudah cache dibersihkan. File `.tex` yang hanya berisi potongan bab tanpa preamble tidak dapat selalu dikompilasi secara mandiri; buka file induk untuk menghasilkan seluruh dokumen.
 
-Buka tab `.tex` yang hendak dikompilasi, pilih engine, kemudian klik **Compile**. Teks `Target: nama-file.tex` tampil di toolbar. **Clean & Recompile** membersihkan cache build lalu mengompilasi file yang sama. PDF ditampilkan untuk file tersebut; memilih file `.tex` lain yang belum dikompilasi tidak akan menampilkan PDF yang keliru.
+## Pintasan keyboard
 
-Untuk proyek multi-file dengan `\include{Isi/Bab1}`, aplikasi menyiapkan direktori pendukung seperti `.latexstudio-build/Isi/` sebelum pemanggilan `latexmk`, termasuk sesudah Clean & Recompile. Folder `.aux` dibuat oleh compiler; EK TeX hanya menyiapkan direktorinya.
+| Pintasan | Tindakan |
+|---|---|
+| `Ctrl+S` | Simpan semua file |
+| `Ctrl+Enter` | Compile file `.tex` aktif |
+| `Ctrl+F` | Cari dalam file |
+| `Ctrl+B` | Sembunyikan / tampilkan sidebar |
+| `\` | Buka saran perintah LaTeX |
+| `↑` / `↓` | Pindah pilihan autocomplete |
+| `Enter` / `Tab` | Sisipkan saran yang dipilih |
+| `Esc` | Tutup popup / dialog |
 
-### Debugger dan Hermes
+## Pemeriksaan aplikasi
 
-Setelah kesalahan kompilasi, gunakan panel Debugger untuk membaca error dan solusi yang terdeteksi. Jika CLI `hermes` telah terpasang dan dikonfigurasi, pengguna dapat meminta saran AI. EK TeX memperlihatkan perubahan yang diusulkan dan meminta persetujuan; file sumber dibackup sebelum penerapan. Hermes dapat menggunakan model/provider eksternal sesuai konfigurasi di komputer, sehingga perhatikan privasi isi dokumen yang dikirim.
-
-## Penyimpanan dan privasi
-
-| Lokasi | Isi |
-| --- | --- |
-| `workspace/<id-proyek>/` | File sumber penelitian dan konfigurasi proyek |
-| `workspace/<id-proyek>/.latexstudio-build/` | PDF, log, file AUX, dan cache kompilasi |
-| `workspace/<id-proyek>/.latexstudio-backups/` | Backup otomatis yang dibuat saat diperlukan |
-
-`workspace/` dikecualikan dari Git melalui `.gitignore`; isinya tidak boleh dimasukkan ke repository publik. EK TeX merupakan layanan **lokal tanpa autentikasi**, bukan aplikasi untuk dibuka langsung ke internet. Jangan menjalankan kompilasi atau konversi pada dokumen tidak tepercaya karena TeX/Pandoc/Hermes berjalan sebagai proses lokal dengan izin pengguna sistem.
-
-## Pengujian dan pemecahan masalah
+Dari folder source:
 
 ```bash
+node --check server.js
+node --check public/app.js
 npm test
-npm run verify-latex
 ```
 
-Jika PDF gagal dibuat, periksa panel log dan jalankan **Clean & Recompile** setelah mengatasi error. Jika `algorithmic.sty` tidak tersedia di Ubuntu, instal `texlive-science`. Jika CSS tidak tampil, jalankan aplikasi melalui `http://127.0.0.1:3457` dan jangan membuka `public/index.html` langsung dengan `file://`.
+Pengujian memeriksa API proyek, compiler, pembuatan folder `.aux`, alur konverter, dan autocomplete/tema. Kompilasi PDF memerlukan `latexmk` dan engine LaTeX pada sistem.
 
----
+## Privasi dan keamanan
 
-**EK TeX** · Developed by **EK Instrumentation**  
-Repository: https://github.com/efendiyhy/ek-tex
+Server dimaksudkan untuk penggunaan lokal. Jangan menaruhnya di jaringan publik tanpa perlindungan akses tambahan. Saran perbaikan Hermes harus ditinjau sebelum diterapkan; perubahan yang disetujui akan dibackup. Konversi DOCX ke LaTeX tidak selalu sempurna untuk persamaan, tabel, dan sitasi yang kompleks.
+
+**Developer:** EK Instrumentation  
+**Repository:** https://github.com/efendiyhy/ek-tex  
+**Versi:** 2.7.0

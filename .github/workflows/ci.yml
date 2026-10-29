@@ -17,6 +17,7 @@ jobs:
         run: |
           node --check server.js
           node --check public/app.js
+          node --check public/editor-features.js
           node --check scripts/verify-compiler.js
           node --check tests/smoke.js
           node --check tests/compile.js

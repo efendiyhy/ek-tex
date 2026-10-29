@@ -1,0 +1,100 @@
+/* EK TeX 2.7 — themes, autocomplete, and compiler error decorations */
+body[data-theme="teal"]{--theme-accent:#2dbda6;--theme-accent-soft:rgba(45,189,166,.15);--theme-accent-ink:#073830}
+body[data-theme="ocean"]{--theme-accent:#518fe5;--theme-accent-soft:rgba(81,143,229,.16);--theme-accent-ink:#0a2347}
+body[data-theme="violet"]{--theme-accent:#a487ed;--theme-accent-soft:rgba(164,135,237,.17);--theme-accent-ink:#2b174d}
+body[data-theme="amber"]{--theme-accent:#d69653;--theme-accent-soft:rgba(214,150,83,.17);--theme-accent-ink:#4b2c12}
+body[data-mode="dark"]{
+ --ui-bg:#0c1423;--ui-surface:#111c2d;--ui-panel:#17263a;--ui-subtle:#1b2d43;--ui-editor:#111c2e;--ui-header:#101a2b;--ui-border:#2a3e56;--ui-strong:#edf4ff;--ui-text:#cbd8e9;--ui-muted:#8ba0bb;--ui-console:#101826;--ui-line:#546982;--ui-shadow:rgba(0,0,0,.35);--ui-input:#142238;--ui-pdf:#c6cbd0;
+ --error-fill:rgba(240,95,108,.17);--error-line:#f17b82;--cyan:var(--theme-accent);--cyan2:var(--theme-accent);--text:var(--ui-text);--muted:var(--ui-muted);--bg:var(--ui-bg);--panel:var(--ui-surface);--panel2:var(--ui-panel);--border:var(--ui-border);--border2:var(--ui-border)
+}
+body[data-mode="light"]{
+ --ui-bg:#f2f5fa;--ui-surface:#ffffff;--ui-panel:#f7f9fd;--ui-subtle:#eaf0f8;--ui-editor:#ffffff;--ui-header:#ffffff;--ui-border:#d4dfe9;--ui-strong:#16253e;--ui-text:#2a405d;--ui-muted:#526985;--ui-console:#f5f8fc;--ui-line:#75879c;--ui-shadow:rgba(29,48,79,.17);--ui-input:#ffffff;--ui-pdf:#d2d6dc;
+ --error-fill:rgba(206,38,56,.11);--error-line:#b52542;--cyan:var(--theme-accent);--cyan2:var(--theme-accent);--text:var(--ui-text);--muted:var(--ui-muted);--bg:var(--ui-bg);--panel:var(--ui-surface);--panel2:var(--ui-panel);--border:var(--ui-border);--border2:var(--ui-border)
+}
+body{background:var(--ui-bg);color:var(--ui-text)}
+.topbar,.preview-header,.bottom-bar,.preview-footer{background:var(--ui-header);border-color:var(--ui-border);color:var(--ui-muted)}
+.workspace,.editor-top,.editor-toolbar,.editor-status,.pdf-toolbar,.rail,.sidebar,.sidebar-context,.side-info,.side-title,.file-tree,.tabs,.tab,.tab.active,.console,.console-head,.build-summary,.preview,.pdf-empty,.dialog,.dialog-header,.dialog-content,.dialog-body,.dialog-footer,.findbar{border-color:var(--ui-border)}
+.rail,.sidebar,.sidebar-context,.side-info,.editor-top,.editor-toolbar,.tabs,.tab,.tab.active,.editor-status,.pdf-toolbar,.preview,.preview-header,.preview-footer,.console,.dialog,.dialog-header,.dialog-content,.dialog-body,.dialog-footer,.findbar{background:var(--ui-surface);color:var(--ui-text)}
+.editor-top,.tab.active,.sidebar-context,.side-info,.findbar,.pdf-toolbar,.console-head{background:var(--ui-panel)}
+.railbtn,.iconbtn,.mini-btn,.toolbtn,.tab-act,.tab,.line-numbers,.editor-caption,.editor-status,.preview-version,.preview-heading,.side-title,.muted,.system-badge,.bottom-bar,.preview-footer button{color:var(--ui-muted)}
+.railbtn:hover,.iconbtn:hover,.mini-btn:hover,.tab-act:hover,.tree-file:hover,.tab:hover,.project-btn:hover{background:var(--ui-subtle);color:var(--ui-strong)}
+.railbtn.active,.tree-file.selected{background:var(--theme-accent-soft);color:var(--theme-accent)}
+.railbtn.active:before{background:var(--theme-accent)}
+.brandname,.dash-heading h1,.side-info strong,.pdf-empty h3,.project-name,.dialog-header h2,.tab.active,.preview-heading{color:var(--ui-strong)}
+.brandname>span,.project-symbol,.linkbtn,.bottom-brand,.dash-period,.dash-row-name small,.dash-developer strong,.developer-foot strong,.bottom-developer strong,.compile-current{color:var(--theme-accent)}
+.btn,.dash-action,.tab,.project-btn,.settings-select,.inputstack input,.side-padding input,.dialog-body input,.dialog-body select,select,input,.template-item{background:var(--ui-input);border-color:var(--ui-border);color:var(--ui-text)}
+.btn:hover,.dash-action:hover,.template-item:hover{background:var(--ui-subtle);border-color:var(--theme-accent)}
+.btn.primary,.compile-btn,.dash-primary,.dialog-footer .primary{background:var(--theme-accent);color:var(--theme-accent-ink);border-color:var(--theme-accent)}
+.btn.primary:hover,.compile-btn:hover,.dash-primary:hover,.dialog-footer .primary:hover{filter:brightness(1.08);background:var(--theme-accent)}
+input:focus,select:focus,.settings-select:focus{border-color:var(--theme-accent);box-shadow:0 0 0 3px var(--theme-accent-soft)}
+.editor-surface,.line-numbers,.code-container,.code-container pre,.code-container textarea{background:var(--ui-editor)}
+.code-container textarea{background:transparent;caret-color:var(--ui-strong)}
+.code-container pre{color:var(--ui-text)}
+.line-numbers{color:var(--ui-line);border-color:var(--ui-border)}
+.tok-cmd{color:var(--theme-accent)}
+.tok-ref{color:var(--theme-accent)}
+body[data-mode="light"] .tok-comment{color:#68816d}
+body[data-mode="light"] .tok-math{color:#ae612f}
+body[data-mode="light"] .tok-brace{color:#7856b6}
+body[data-mode="light"] .tok-special{color:#c24d6e}
+body[data-mode="dark"] .tok-math{color:#e5c59a}
+body[data-mode="light"] .code-container textarea::selection{background:#b7cef780}
+body[data-mode="dark"] .code-container textarea::selection{background:#426b8159}
+.pdf-host{background:var(--ui-pdf)}
+.pdf-empty{background:var(--ui-panel)}
+.pdf-empty p,.pdf-empty strong,.hint-inline,.dash-heading p,.dash-row-main,.dash-row-date{color:var(--ui-muted)}
+.console,#log-text{background:var(--ui-console);color:var(--ui-text)}
+.diagnostic-item{background:var(--error-fill);color:var(--error-line)}
+.build-summary{background:var(--ui-panel);color:var(--error-line);border-color:var(--error-line)}
+.dialog{box-shadow:0 16px 70px var(--ui-shadow);border:1px solid var(--ui-border)}
+.dialog-header,.dialog-footer{border-color:var(--ui-border)}
+.dialog-body label,.dialog-body p{color:var(--ui-muted)}
+.settings-code{background:var(--ui-panel);color:var(--ui-text);border-color:var(--ui-border)}
+.dashboard{background:var(--ui-bg)}
+.dash-eyebrow,.dash-library-head span,.dash-list-head,.dash-foot,.dash-stat>span,.dash-stat>small{color:var(--ui-muted)}
+.dash-stat,.dash-project-row,.dash-project,.dash-no-results,.dash-developer,.dash-search,.dash-quick,.dash-action,.dash-list-head{background:var(--ui-surface);border-color:var(--ui-border)}
+.dash-project-row:hover{background:var(--ui-panel);border-color:var(--theme-accent)}
+.dash-project-open,.dash-row-name strong,.dash-library-head h2,.dash-stat>strong,.dash-search input,.dash-quick{color:var(--ui-strong)}
+.dash-row-icon{background:var(--theme-accent-soft);color:var(--theme-accent)}
+.dash-stat>strong#dash-compiler,.dash-quick span{color:var(--theme-accent)}
+.dash-search input{background:transparent}
+.dash-developer{border:1px solid var(--ui-border)}
+.dash-action.danger{background:var(--error-fill);border-color:var(--error-line);color:var(--error-line)}
+.dash-foot{border-color:var(--ui-border)}
+body[data-mode="light"] .avatar{background:var(--ui-panel);border-color:var(--ui-border);color:var(--ui-text)}
+body[data-mode="light"] .code-container textarea{-webkit-text-fill-color:transparent}
+/* Colorized error lines aligned with the syntax and textarea overlays */
+.code-container .code-line{display:block;min-height:24px;line-height:24px;white-space:pre;position:relative;box-sizing:border-box}
+.code-container .code-line.compile-error-line{background:var(--error-fill);box-shadow:inset 3px 0 var(--error-line)}
+.line-numbers .line-number{display:block;height:24px;line-height:24px;position:relative;cursor:pointer}
+.line-numbers .line-number:hover{background:var(--ui-subtle);color:var(--ui-strong)}
+.line-numbers .line-number-error{background:var(--error-fill);color:var(--error-line);font-weight:750}
+.gutter-alert{position:absolute;left:3px;top:0;font-size:9px;color:var(--error-line)}
+.debug-location-hint{font-size:11px;line-height:1.5;color:var(--error-line)}
+/* Positioned commands list; fully offline, keyboard navigable */
+.latex-suggestions{position:absolute;z-index:8;width:255px;max-height:300px;overflow:auto;padding:5px;background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:9px;box-shadow:0 12px 30px var(--ui-shadow)}
+.latex-suggestion{border:0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;color:var(--ui-text);padding:9px 10px;font:12px var(--code-font)}
+.latex-suggestion small{font:10px var(--ui-font);color:var(--ui-muted)}
+.latex-suggestion:hover,.latex-suggestion.selected{background:var(--theme-accent-soft);color:var(--theme-accent)}
+/* Settings UI and theme palette */
+.settings-group{border-bottom:1px solid var(--ui-border);padding-bottom:15px;margin-bottom:14px}
+.settings-group h3{font-size:13px;color:var(--ui-strong);margin:4px 0 14px}
+.settings-select{width:100%;padding:9px;min-height:37px}
+.theme-preview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:13px 0}
+.theme-swatch{border:1px solid var(--ui-border);padding:9px 5px;border-radius:8px;background:var(--ui-panel);display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--ui-muted)}
+.theme-swatch span{height:25px;width:25px;background:var(--swatch-color);border-radius:8px;box-shadow:0 0 0 4px var(--ui-surface)}
+.theme-swatch small{font-size:10px}
+.theme-swatch.selected{border-color:var(--theme-accent);background:var(--theme-accent-soft);color:var(--ui-strong)}
+@media(max-width:700px){.dash-actions{flex-wrap:wrap}.theme-preview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Ensure sufficient contrast for older controls with hard-coded backgrounds */
+body[data-mode="light"] .dash-actions .btn,body[data-mode="light"] .btn.outline,
+body[data-mode="light"] .pdf-toolbar .clean-btn,body[data-mode="light"] .pdf-toolbar select,
+body[data-mode="light"] .dialog-close,body[data-mode="light"] .pdf-toolbar .iconbtn{
+ background:var(--ui-surface);border-color:var(--ui-border);color:var(--ui-text)
+}
+body[data-mode="light"] .dash-actions .btn:hover,body[data-mode="light"] .btn.outline:hover,
+body[data-mode="light"] .pdf-toolbar .clean-btn:hover{background:var(--ui-subtle);border-color:var(--theme-accent)}
+body[data-mode="light"] .pdf-toolbar select option{background:var(--ui-surface);color:var(--ui-text)}
+body[data-mode="light"] .dash-quick,body[data-mode="light"] .dash-foot code{color:var(--ui-strong)}
+body[data-mode="light"] .file-icon{color:#3f67ac}
+body[data-mode="light"] .sidebar .side-info-head{color:var(--theme-accent)}

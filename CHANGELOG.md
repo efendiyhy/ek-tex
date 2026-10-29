@@ -1,32 +1,24 @@
 # Changelog
 
-## 2.6.0 — Project workflow update
+## 2.7.0 — Editor Assistance & Themes (2026-10-29)
 
-- Converter to LaTeX now creates a separate project, including media extraction and project metadata. Accessible from dashboard and editor.
-- Added project rename and deletion to dashboard, with exact-name confirmation for permanent deletion.
-- Reworked dashboard into a compact summary and vertical project list.
-- Compile and Clean & Recompile now target the currently opened `.tex` file, with source-specific PDF preview.
-- Reset build cache when changing compilation targets to avoid stale or mismatched PDFs.
-- Preserved debugger, optional Hermes suggestions, Pandoc converters, Bibliography, nested `\include` AUX preparation, and Windows/Linux installers.
-- Updated automated tests for project management, conversion isolation, active-file compilation, and PDF routing.
-- Rewritten README with installation, update, usage, limitations, and privacy guidance.
+- Menambahkan autocomplete perintah LaTeX setelah karakter `\\` dengan pilihan berbasis keyboard/mouse dan template yang menempatkan kursor secara otomatis.
+- Menambahkan highlight merah di kode dan gutter untuk kesalahan kompilasi yang menyertakan nama file dan nomor baris.
+- Memperbarui navigasi diagnostik: klik pesan error untuk membuka file dan berpindah ke baris terkait.
+- Menyediakan empat palet tema (Emerald, Ocean Blue, Amethyst, Copper), masing-masing tersedia dalam mode Dark dan Light.
+- Menyimpan preferensi tema di browser, tersedia dari halaman dashboard maupun editor.
+- Menambah pengujian fitur editor dan memperbarui README instalasi/pembaruan.
 
-## 2.5.1
+## 2.6.0 — Project Workflow
 
-- Prepare `.latexstudio-build/` subdirectories before each compile for `\include` AUX files.
+- Dashboard proyek berbentuk daftar dengan rename/delete dan ringkasan compact.
+- Konverter dokumen menghasilkan proyek LaTeX baru tanpa mencampurkan hasilnya dengan proyek terbuka.
+- Compile mengikuti tab `.tex` yang aktif dan pratinjau PDF terkait.
 
-## 2.5.0
+## 2.5.1 — Nested AUX Directories
 
-- Offline LaTeX debugger, optional Hermes suggestions with review/backup, Pandoc document conversion.
+- Menyiapkan direktori `.latexstudio-build` sebelum compile biasa dan sesudah Clean & Recompile agar `\\include` bersubfolder dapat menulis `.aux`.
 
-## 2.4.0
+## 2.5.0 — Debugging & Converter
 
-- Live compile logs, Clean & Recompile, Stop Compile, diagnostic navigation, and stale latexmk recovery.
-
-## 2.3.0
-
-- Simplified local and GitHub installers; default installation under Documents.
-
-## 2.2.0
-
-- EK Instrumentation developer branding and cat logo.
+- Integrasi Hermes Agent opsional, debugger offline, dan konversi dengan Pandoc.

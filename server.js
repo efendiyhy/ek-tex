@@ -461,7 +461,9 @@ async function router(req,res){
   const cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));
   if(route==='diagnose'&&method==='GET'){
    let log=job?.log||'';if(!log){try{log=fs.readFileSync(path.join(dir,'.latexstudio-build','build.log'),'utf8')}catch{}}
-   return json(res,{issues:analyzeLatex(log),diagnostics:latexDiagnostics(dir,cfg.main,log),hermes:isAvailable('hermes'),pandoc:isAvailable('pandoc'),hasLog:!!log});
+   const requested=String(url.searchParams.get('file')||job?.file||cfg.main);
+   const diagnosticFile=requested.toLowerCase().endsWith('.tex')&&fs.existsSync(safePath(dir,requested))?requested:cfg.main;
+   return json(res,{issues:analyzeLatex(log),diagnostics:latexDiagnostics(dir,diagnosticFile,log),hermes:isAvailable('hermes'),pandoc:isAvailable('pandoc'),hasLog:!!log});
   }
   if(route==='hermes/suggest'&&method==='POST'){
    if(locks.has(path.basename(dir)))throw fail(409,'Hermes sedang memproses permintaan lain di proyek ini.');

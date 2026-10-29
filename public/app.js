@@ -2,8 +2,17 @@
 const $=id=>document.getElementById(id);
 const localPref={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const state={project:null,config:null,projects:[],tabs:[],active:null,docs:new Map(),saveTimers:new Map(),build:false,log:'',preview:false,previewFile:null,selectedTemplate:'article',side:'files',sidebarCollapsed:localPref.get('latexstudio-sidebar-collapsed')==='1',view:'dashboard'};
+const features=window.EKTeXFeatures;
+const state={project:null,config:null,projects:[],tabs:[],active:null,docs:new Map(),saveTimers:new Map(),build:false,log:'',preview:false,previewFile:null,selectedTemplate:'article',side:'files',sidebarCollapsed:localPref.get('latexstudio-sidebar-collapsed')==='1',view:'dashboard',diagnostics:[],suggestIndex:0,suggestCtx:null,theme:features.validTheme(localPref.get('ektex-theme')),mode:features.validMode(localPref.get('ektex-mode'))};
 let toastTimer;
+function applyAppearance(theme=state.theme,mode=state.mode){
+ state.theme=features.validTheme(theme);state.mode=features.validMode(mode);
+ document.body.dataset.theme=state.theme;document.body.dataset.mode=state.mode;
+ localPref.set('ektex-theme',state.theme);localPref.set('ektex-mode',state.mode);
+ const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=state.mode==='dark'?'#111b2d':'#f4f7fb';
+}
+applyAppearance();
+
 const snippets=[
  {title:'Section',short:'\\section{...}',code:'\\section{Judul Bagian}\n'},
  {title:'Equation',short:'\\begin{equation}',code:'\\begin{equation}\n  E = mc^2\n  \\label{eq:contoh}\n\\end{equation}\n'},
@@ -105,10 +114,10 @@ $('dashboard-new').onclick=newProjectDialog;
 $('dashboard-import').onclick=()=>$('zip-input').click();
 $('dashboard-convert').onclick=()=>openConverter();
 $('dashboard-search').oninput=renderDashboard;
-async function chooseProject(id){await saveAll();const project=state.projects.find(x=>x.id===id);if(!project)throw new Error('Proyek tidak ditemukan.');state.project=project;state.config=await api(`/api/projects/${id}/config`);state.docs.clear();state.tabs=[];state.active=null;state.preview=false;state.previewFile=null;$('pdf-frame').classList.add('hidden');$('pdf-empty').classList.remove('hidden');$('preview-version').textContent='Belum dikompilasi';$('project-name').textContent=state.config.name||project.name;$('sidebar-project').textContent=state.config.name||project.name;$('engine').value=state.config.engine||'pdf';showEditor();await reloadTree();await openFile(state.config.main||'main.tex');}
+async function chooseProject(id){await saveAll();const project=state.projects.find(x=>x.id===id);if(!project)throw new Error('Proyek tidak ditemukan.');state.project=project;state.diagnostics=[];hideSuggestions();state.config=await api(`/api/projects/${id}/config`);state.docs.clear();state.tabs=[];state.active=null;state.preview=false;state.previewFile=null;$('pdf-frame').classList.add('hidden');$('pdf-empty').classList.remove('hidden');$('preview-version').textContent='Belum dikompilasi';$('project-name').textContent=state.config.name||project.name;$('sidebar-project').textContent=state.config.name||project.name;$('engine').value=state.config.engine||'pdf';showEditor();await reloadTree();await openFile(state.config.main||'main.tex');}
 function syncSaveIndicator(){const dirty=[...state.docs.values()].some(x=>x.dirty);$('dirty-indicator').textContent=dirty?'● Unsaved':'● Saved';$('dirty-indicator').classList.toggle('dirty',dirty);renderTabs();}
 async function openFile(p){if(!state.project)return;
- if(state.active===p)return;
+ if(state.active===p)return;hideSuggestions();
  if(state.active){const old=state.docs.get(state.active);if(old){old.scroll=$('code-editor').scrollTop;old.cursor=$('code-editor').selectionStart;}}
  if(!state.docs.has(p)){const file=await api(`/api/projects/${state.project.id}/file?path=${pathUrl(p)}`);state.docs.set(p,{content:file.content,dirty:false,scroll:0,cursor:0});}
  if(!state.tabs.includes(p))state.tabs.push(p);state.active=p;
@@ -117,24 +126,76 @@ async function closeTab(p){if(state.docs.get(p)?.dirty)await savePath(p);state.t
 async function savePath(p){const doc=state.docs.get(p);if(!doc||!doc.dirty)return;clearTimeout(state.saveTimers.get(p));const snapshot=doc.content;statusText('Saving...');try{await api(`/api/projects/${state.project.id}/file`,'PUT',{path:p,content:snapshot});if(doc.content===snapshot)doc.dirty=false;syncSaveIndicator();statusText('Saved');}catch(e){statusText('Save error');toast('Gagal menyimpan '+p+': '+e.message,true);throw e}}
 async function saveAll(){const dirty=[...state.docs.keys()].filter(p=>state.docs.get(p).dirty);for(const p of dirty)await savePath(p);}
 function scheduleSave(p){clearTimeout(state.saveTimers.get(p));state.saveTimers.set(p,setTimeout(()=>savePath(p).catch(()=>{}),750));}
-function renderCode(){const input=$('code-editor').value;const pre=$('syntax-layer');const lineHtml=input.split('\n').map(line=>{
+function renderCode(){
+ const input=$('code-editor').value,pre=$('syntax-layer'),issues=features.errorsForFile(state.diagnostics,state.active);
+ const errorLines=new Map(issues.map(d=>[Number(d.line),d.message]));
+ const lines=input.split('\n');
+ pre.innerHTML=lines.map((line,i)=>{
   const re=/(%[^\n]*|\\(?:[A-Za-z@]+\*?|[^A-Za-z\n])|\$[^$\n]*\$|[{}])/g;let output='',last=0,m;
   while((m=re.exec(line))!==null){output+=esc(line.slice(last,m.index));const token=m[0];const cls=token[0]==='%'?'tok-comment':token[0]==='$'?'tok-math':token==='{'||token==='}'?'tok-brace':/^\\(?:cite|ref|eqref|label|bibliography|includegraphics)/.test(token)?'tok-ref':token[0]==='\\'?'tok-cmd':'tok-special';output+=`<span class="${cls}">${esc(token)}</span>`;last=m.index+token.length;}
-  return output+esc(line.slice(last));}).join('\n');pre.innerHTML=lineHtml+'\n';$('line-numbers').textContent=Array.from({length:input.split('\n').length},(_,i)=>i+1).join('\n');syncScroll();}
-function syncScroll(){let t=$('code-editor');$('syntax-layer').scrollTop=t.scrollTop;$('syntax-layer').scrollLeft=t.scrollLeft;$('line-numbers').scrollTop=t.scrollTop;}
+  const errored=errorLines.has(i+1);return `<span class="code-line${errored?' compile-error-line':''}" data-line="${i+1}"${errored?` title="${esc(errorLines.get(i+1))}"`:''}>${output+esc(line.slice(last))||'&#8203;'}</span>`;
+ }).join('');
+ $('line-numbers').innerHTML=lines.map((_,i)=>{const issue=errorLines.get(i+1);return `<span class="line-number${issue?' line-number-error':''}" data-line="${i+1}"${issue?` title="${esc(issue)}"`:''}>${i+1}${issue?'<span class="gutter-alert" aria-label="Error">●</span>':''}</span>`;}).join('');
+ syncScroll();
+}
+function syncScroll(){let t=$('code-editor');$('syntax-layer').scrollTop=t.scrollTop;$('syntax-layer').scrollLeft=t.scrollLeft;$('line-numbers').scrollTop=t.scrollTop;placeSuggestions();}
 function updateCursor(){let t=$('code-editor'),before=t.value.slice(0,t.selectionStart),line=before.split('\n');$('cursor-position').textContent=`Ln ${line.length}, Col ${line[line.length-1].length+1}`;}
-$('code-editor').addEventListener('input',()=>{if(!state.active)return;const d=state.docs.get(state.active);d.content=$('code-editor').value;d.dirty=true;renderCode();syncSaveIndicator();scheduleSave(state.active);updateCursor();});
-$('code-editor').addEventListener('scroll',syncScroll);$('code-editor').addEventListener('click',updateCursor);$('code-editor').addEventListener('keyup',updateCursor);
+function jumpToLine(line){
+ const editor=$('code-editor'),rows=editor.value.split('\n');const n=Math.max(1,Math.min(rows.length,Number(line)||1));let pos=0;
+ for(let i=0;i<n-1;i++)pos+=rows[i].length+1;
+ hideSuggestions();editor.focus();editor.setSelectionRange(pos,pos);editor.scrollTop=Math.max(0,(n-5)*24);updateCursor();syncScroll();
+}
+$('line-numbers').addEventListener('click',e=>{const el=e.target.closest('[data-line]');if(el)jumpToLine(Number(el.dataset.line));});
+function hideSuggestions(){state.suggestCtx=null;$('latex-suggestions').classList.add('hidden');$('latex-suggestions').replaceChildren();}
+function currentSuggestions(){return state.suggestCtx?features.suggest(state.suggestCtx.prefix):[];}
+function placeSuggestions(){
+ const box=$('latex-suggestions');if(box.classList.contains('hidden')||!state.suggestCtx)return;
+ const t=$('code-editor'),index=state.suggestCtx.end,before=t.value.slice(0,index),rows=before.split('\n');
+ const row=rows.length-1,col=rows[rows.length-1].length;
+ const w=t.parentElement.clientWidth,h=t.parentElement.clientHeight;
+ const left=Math.max(7,Math.min(w-255,24+col*7.84-t.scrollLeft));
+ let top=20+row*24-t.scrollTop+28;const popupHeight=Math.min(300,box.scrollHeight||300);
+ if(top+popupHeight>h-8)top=Math.max(8,20+row*24-t.scrollTop-popupHeight-8);
+ box.style.left=Math.max(7,left)+'px';box.style.top=top+'px';
+}
+function updateAutocomplete(){
+ const t=$('code-editor');if(!state.active?.toLowerCase().endsWith('.tex')||t.selectionStart!==t.selectionEnd){hideSuggestions();return;}
+ const ctx=features.context(t.value,t.selectionStart),matches=ctx?features.suggest(ctx.prefix):[];
+ if(!matches.length){hideSuggestions();return;}
+ state.suggestCtx=ctx;state.suggestIndex=Math.min(state.suggestIndex,matches.length-1);
+ const menu=$('latex-suggestions');menu.replaceChildren();
+ matches.forEach((cmd,i)=>{
+  const btn=document.createElement('button');btn.type='button';btn.role='option';btn.className='latex-suggestion'+(i===state.suggestIndex?' selected':'');btn.setAttribute('aria-selected',i===state.suggestIndex?'true':'false');
+  const left=document.createElement('span');left.textContent='\\'+cmd.name;const group=document.createElement('small');group.textContent=cmd.group;btn.append(left,group);
+  btn.onmousedown=e=>{e.preventDefault();acceptSuggestion(i)};menu.append(btn);
+ });
+ menu.classList.remove('hidden');placeSuggestions();
+}
+function acceptSuggestion(index=state.suggestIndex){
+ const ctx=state.suggestCtx;if(!ctx)return;const cmd=currentSuggestions()[index];if(!cmd)return;
+ const x=features.expand(cmd.template),t=$('code-editor'),content=t.value;
+ hideSuggestions();changeEditor(content.slice(0,ctx.start)+x.text+content.slice(ctx.end),ctx.start+x.cursor);
+}
+$('code-editor').addEventListener('input',()=>{if(!state.active)return;const d=state.docs.get(state.active);d.content=$('code-editor').value;d.dirty=true;renderCode();syncSaveIndicator();scheduleSave(state.active);updateCursor();updateAutocomplete();});
+$('code-editor').addEventListener('blur',()=>setTimeout(hideSuggestions,140));
+$('code-editor').addEventListener('scroll',syncScroll);$('code-editor').addEventListener('click',()=>{updateCursor();updateAutocomplete()});$('code-editor').addEventListener('keyup',()=>{updateCursor();updateAutocomplete()});
 function changeEditor(next,at){const t=$('code-editor');t.value=next;t.focus();t.selectionStart=t.selectionEnd=at;t.dispatchEvent(new Event('input',{bubbles:true}));}
 function insertCode(s){if(!state.active)return toast('Buka file teks terlebih dahulu.',true);const t=$('code-editor'),start=t.selectionStart,end=t.selectionEnd;changeEditor(t.value.slice(0,start)+s+t.value.slice(end),start+s.length);}
-$('code-editor').addEventListener('keydown',e=>{const t=e.target,sel=t.selectionStart,end=t.selectionEnd;if(e.key==='Tab'){e.preventDefault();if(e.shiftKey){const start=t.value.lastIndexOf('\n',sel-1)+1;if(t.value.slice(start,start+2)==='  '){const next=t.value.slice(0,start)+t.value.slice(start+2);changeEditor(next,Math.max(start,sel-2));}}else{changeEditor(t.value.slice(0,sel)+'  '+t.value.slice(end),sel+2);}return;}
+$('code-editor').addEventListener('keydown',e=>{const t=e.target,sel=t.selectionStart,end=t.selectionEnd;
+ if(state.suggestCtx){
+  const matches=currentSuggestions();
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();state.suggestIndex=(state.suggestIndex+(e.key==='ArrowDown'?1:-1)+matches.length)%matches.length;updateAutocomplete();return;}
+  if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();acceptSuggestion();return;}
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();hideSuggestions();return;}
+ }
+ if(e.key==='Tab'){e.preventDefault();if(e.shiftKey){const start=t.value.lastIndexOf('\n',sel-1)+1;if(t.value.slice(start,start+2)==='  '){const next=t.value.slice(0,start)+t.value.slice(start+2);changeEditor(next,Math.max(start,sel-2));}}else{changeEditor(t.value.slice(0,sel)+'  '+t.value.slice(end),sel+2);}return;}
  if(e.key==='Enter'&&!e.ctrlKey&&!e.metaKey){const start=t.value.lastIndexOf('\n',sel-1)+1;const indentation=(t.value.slice(start,sel).match(/^\s+/)||[''])[0];if(indentation){e.preventDefault();changeEditor(t.value.slice(0,sel)+'\n'+indentation+t.value.slice(end),sel+1+indentation.length);}}
 });
 window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveAll().then(()=>toast('Semua file tersimpan.')).catch(()=>{});}
  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&state.view==='editor'){e.preventDefault();buildPdf();}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='b'&&state.view==='editor'){e.preventDefault();toggleSidebar();}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'&&$('overlay').classList.contains('hidden')){e.preventDefault();openFind();}
- if(e.key==='Escape'){closeModal();$('findbar').classList.add('hidden');}
+ if(e.key==='Escape'){hideSuggestions();closeModal();$('findbar').classList.add('hidden');}
 });
 function openFind(){$('findbar').classList.remove('hidden');$('find-input').focus();findNext();}
 function findNext(){const query=$('find-input').value,t=$('code-editor');if(!query){$('find-count').textContent='';return;}let pos=t.value.toLowerCase().indexOf(query.toLowerCase(),t.selectionEnd);if(pos<0)pos=t.value.toLowerCase().indexOf(query.toLowerCase());if(pos>=0){t.focus();t.setSelectionRange(pos,pos+query.length);$('find-count').textContent=`Found`;updateCursor();}else $('find-count').textContent='Not found';}
@@ -168,7 +229,7 @@ $('refresh-pdf').onclick=()=>{if(state.preview&&state.previewFile===activeTex())
 $('download-pdf').onclick=()=>{if(!state.preview||state.previewFile!==activeTex())return toast('Belum ada PDF untuk file ini.',true);const a=document.createElement('a');a.href=`/api/projects/${state.project.id}/pdf?file=${encodeURIComponent(state.previewFile)}`;a.download=state.previewFile.split('/').pop().replace(/\.tex$/i,'.pdf');a.click()};
 function renderBuildSummary(result){
  const node=$('build-summary');node.innerHTML='';
- const diagnostics=result.diagnostics||[];
+ const diagnostics=result.diagnostics||[];state.diagnostics=result.ok?[]:diagnostics;renderCode();
  if(result.ok){node.classList.add('hidden');return;}
  node.classList.remove('hidden');
  const headline=document.createElement('strong');headline.textContent=result.summary||'Kompilasi gagal';node.append(headline);
@@ -177,7 +238,7 @@ function renderBuildSummary(result){
   for(const d of diagnostics.slice(0,8)){
    const file=String(d.file||''),line=Number(d.line||0),entry=document.createElement('button');entry.type='button';entry.className='diagnostic-item';
    const prefix=file?(file+(line?':'+line:'')):'LaTeX';entry.textContent=prefix+' — '+d.message;
-   if(file){entry.title='Buka file dan lompat ke lokasi error';entry.onclick=async()=>{try{await openFile(file);if(line>0){const editor=$('code-editor'),rows=editor.value.split('\n');let pos=0;for(let i=0;i<Math.min(line-1,rows.length);i++)pos+=rows[i].length+1;editor.focus();editor.setSelectionRange(pos,pos);editor.scrollTop=Math.max(0,(line-8)*19);updateCursor();}}catch(e){toast('Tidak dapat membuka '+file+': '+e.message,true)}};}
+   if(file){entry.title='Buka file dan sorot baris error';entry.onclick=async()=>{try{await openFile(file);if(line>0){jumpToLine(line);}}catch(e){toast('Tidak dapat membuka '+file+': '+e.message,true)}};}
    else entry.disabled=true;
    list.append(entry);
   }
@@ -231,13 +292,24 @@ $('upload-file').onclick=()=>$('file-input').click();
 $('zip-input').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const base64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=reject;r.readAsDataURL(file)});const p=await api('/api/projects/import','POST',{name:file.name.replace(/\.zip$/i,''),data:base64});await loadProjects();closeModal();await chooseProject(p.id);toast('ZIP berhasil diimpor.')}catch(err){toast('Import ZIP gagal: '+err.message,true)}e.target.value=''};
 $('file-input').onchange=async e=>{let files=[...e.target.files];if(!state.project||!files.length)return;for(const file of files){try{if(file.size>12*1024*1024)throw new Error('File terlalu besar (>12MB).');let data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=reject;r.readAsDataURL(file)});await api(`/api/projects/${state.project.id}/upload`,'POST',{path:file.name,data});toast('Upload: '+file.name);}catch(err){toast(file.name+': '+err.message,true)}}e.target.value='';await reloadTree();};
 $('export-project').onclick=async()=>{try{await saveAll();const a=document.createElement('a');a.href=`/api/projects/${state.project.id}/export`;a.download=state.project.id+'.zip';a.click();toast('Export ZIP dimulai.')}catch(e){toast(e.message,true)}};
-function configureDialog(){if(!state.config)return;modal('Pengaturan proyek',`<label>Nama proyek</label><input id="setting-project-name" value="${esc(state.config.name||'')}"><label>Main document (.tex)</label><input id="setting-main" value="${esc(state.config.main||'main.tex')}"><p>Ganti main document bila proyek terdiri dari beberapa file .tex. File referensi dapat disimpan pada <strong>references.bib</strong>.</p><p>Workspace lokal:</p><div class="settings-code" id="workspace-path">Loading...</div>`,modalButtons('Simpan pengaturan'),'SETTINGS');api('/api/status').then(s=>$('workspace-path').textContent=s.workspace).catch(()=>{});$('modal-apply').onclick=async()=>{try{state.config=await api(`/api/projects/${state.project.id}/config`,'PATCH',{name:$('setting-project-name').value,main:$('setting-main').value});$('project-name').textContent=state.config.name;$('sidebar-project').textContent=state.config.name;await loadProjects();closeModal();toast('Pengaturan tersimpan.')}catch(e){toast(e.message,true)}};}
+function configureDialog(){
+ const project=Boolean(state.view==='editor'&&state.config&&state.project);
+ const projectFields=project?`<div class="settings-group"><h3>Proyek</h3><label>Nama proyek</label><input id="setting-project-name" value="${esc(state.config.name||'')}"><label>Main document (.tex)</label><input id="setting-main" value="${esc(state.config.main||'main.tex')}"><p>Compile selalu menggunakan tab .tex yang aktif. Main document menentukan file yang dibuka pertama kali.</p></div>`:'';
+ modal('Pengaturan EK TeX',`<div class="settings-group"><h3>Tampilan editor</h3><label for="setting-theme">Palet tema</label><select id="setting-theme" class="settings-select">${Object.entries(features.themes).map(([id,v])=>`<option value="${id}" ${id===state.theme?'selected':''}>${v.label}</option>`).join('')}</select><label for="setting-mode">Mode</label><select id="setting-mode" class="settings-select"><option value="dark" ${state.mode==='dark'?'selected':''}>Gelap (Dark)</option><option value="light" ${state.mode==='light'?'selected':''}>Terang (Light)</option></select><div id="theme-preview" class="theme-preview" aria-label="Pratinjau palet tema"></div><p>Pengaturan tampilan diterapkan langsung dan diingat oleh browser ini.</p></div>${projectFields}<p>Workspace lokal:</p><div class="settings-code" id="workspace-path">Memuat...</div>`,project?modalButtons('Simpan pengaturan'):'<button class="btn primary" data-cancel>Tutup</button>','SETTINGS');
+ const preview=()=>{$('theme-preview').innerHTML=Object.entries(features.themes).map(([id,v])=>`<button class="theme-swatch${state.theme===id?' selected':''}" data-theme-choice="${id}" type="button" title="${v.label}"><span style="--swatch-color:${v.accent}"></span><small>${v.label}</small></button>`).join('');document.querySelectorAll('[data-theme-choice]').forEach(b=>b.onclick=()=>{applyAppearance(b.dataset.themeChoice,state.mode);$('setting-theme').value=state.theme;preview()})};
+ $('setting-theme').onchange=e=>{applyAppearance(e.target.value,state.mode);preview()};
+ $('setting-mode').onchange=e=>applyAppearance(state.theme,e.target.value);
+ preview();api('/api/status').then(s=>{if($('workspace-path'))$('workspace-path').textContent=s.workspace}).catch(()=>{});
+ if(project)$('modal-apply').onclick=async()=>{try{state.config=await api(`/api/projects/${state.project.id}/config`,'PATCH',{name:$('setting-project-name').value,main:$('setting-main').value});$('project-name').textContent=state.config.name;$('sidebar-project').textContent=state.config.name;await loadProjects();closeModal();toast('Pengaturan tersimpan.')}catch(e){toast(e.message,true)}};
+}
+
 $('open-settings').onclick=configureDialog;
+$('dashboard-settings').onclick=configureDialog;
 function helpDialog(){modal('Setup compiler otomatis',`<p>Instalasi sekarang <strong>terintegrasi dengan launcher</strong>. Anda tidak perlu memasang latexmk satu per satu.</p><p><strong>Windows:</strong> Tutup server, lalu jalankan <code>start-windows.bat</code>. Launcher memeriksa Node.js, MiKTeX, Strawberry Perl, dan latexmk, kemudian menawarkan instalasi melalui WinGet.</p><div class="settings-code">start-windows.bat
 # Alternatif di PowerShell: ./setup-windows.ps1</div><p><strong>Ubuntu / Debian / Orange Pi:</strong></p><div class="settings-code">chmod +x start-linux.sh setup-linux.sh
 ./start-linux.sh</div><p>Perlu koneksi internet pada instalasi pertama dan untuk paket LaTeX yang belum terpasang. Jika installer gagal, periksa izin administrator/sudo dan pesan kesalahan di terminal.</p>`,`<button class="btn primary" data-cancel>Mengerti</button>`,'INSTALLER');}
 $('help-compile').onclick=helpDialog;$('preview-help').onclick=helpDialog;
-$('show-shortcuts').onclick=()=>modal('Pintasan keyboard',`<p><strong>Ctrl + S</strong> — Simpan semua file</p><p><strong>Ctrl + Enter</strong> — Compile & refresh PDF</p><p><strong>Ctrl + F</strong> — Cari teks dalam dokumen</p><p><strong>Tab</strong> — Indent 2 spasi</p><p><strong>Shift + Tab</strong> — Hapus indent</p><p><strong>Esc</strong> — Tutup dialog/pencarian</p>`,`<button class="btn primary" data-cancel>Oke</button>`,'SHORTCUTS');
+$('show-shortcuts').onclick=()=>modal('Pintasan keyboard',`<p><strong>Ctrl + S</strong> — Simpan semua file</p><p><strong>Ctrl + Enter</strong> — Compile & refresh PDF</p><p><strong>Ctrl + F</strong> — Cari teks dalam dokumen</p><p><strong>Tab</strong> — Indent 2 spasi</p><p><strong>Shift + Tab</strong> — Hapus indent</p><p><strong>\</strong> — Tampilkan saran perintah LaTeX; panah ↑↓, Enter/Tab untuk memilih</p><p><strong>Esc</strong> — Tutup dialog/pencarian/autocomplete</p>`,`<button class="btn primary" data-cancel>Oke</button>`,'SHORTCUTS');
 $('insert-figure').onclick=()=>insertCode(snippets.find(x=>x.title==='Figure').code);
 $('insert-cite').onclick=async()=>{try{await saveAll();const bib=await api(`/api/projects/${state.project.id}/file?path=references.bib`);const keys=[...bib.content.matchAll(/@\w+\s*\{\s*([^,\s]+)/g)].map(x=>x[1]);modal('Sisipkan kutipan',`<label>Citation key</label><input id="cite-key" list="cite-suggestions" value="${esc(keys[0]||'')}"><datalist id="cite-suggestions">${keys.map(k=>`<option value="${esc(k)}">`).join('')}</datalist><p>Pilih salah satu key dari references.bib, lalu tambahkan pada posisi kursor.</p>`,modalButtons('Sisipkan citation'),'BIBLIOGRAPHY');$('modal-apply').onclick=()=>{const key=$('cite-key').value.trim();closeModal();insertCode(`\\cite{${key}}`)};}catch(e){toast(e.message,true);setSide('references')}};
 function renderSnippets(){const host=$('snippets');host.innerHTML=snippets.map((s,i)=>`<button class="snippet-btn" data-snippet="${i}"><span>${esc(s.title)}</span><code>${esc(s.short)}</code></button>`).join('');host.querySelectorAll('button').forEach(b=>b.onclick=()=>insertCode(snippets[Number(b.dataset.snippet)].code));}
@@ -303,8 +375,9 @@ init();
 async function showDebugger(){
  if(!state.project)return;
  setSide('tools');$('debug-report').textContent='Menganalisis log...';
- try{const r=await api(`/api/projects/${state.project.id}/diagnose`);
+ try{const r=await api(`/api/projects/${state.project.id}/diagnose?file=${encodeURIComponent(activeTex()||state.config.main)}`);
   $('debug-report').replaceChildren();
+  if(r.diagnostics?.length){state.diagnostics=r.diagnostics;renderCode();const h=document.createElement('p');h.className='debug-location-hint';h.textContent=`${r.diagnostics.length} lokasi error terdeteksi. Klik error pada Output untuk menuju barisnya.`;$('debug-report').append(h);}
   for(const issue of r.issues){const card=document.createElement('div');card.className='debug-issue';
    const h=document.createElement('strong');h.textContent=issue.title;const d=document.createElement('p');d.textContent=issue.detail;
    const f=document.createElement('code');f.textContent=issue.fix;card.append(h,d,f);$('debug-report').append(card);}
