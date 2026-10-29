@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.9.2 — Find & Replace and Floating AI Chat
+
+- Introduced Find & Replace for the current file, with one-click Replace, Replace All, case sensitivity and whole-word matching.
+- Added keyboard shortcuts Ctrl+F / Ctrl+H and previous/next match navigation.
+- Positioned the AI Chat as a compact, minimizable popup in the editor’s bottom-right corner with a floating launcher.
+- Introduced explicit **Ganti teks** mode for AI-assisted replacement of selected LaTeX text; the before/after review and backup protections remain.
+- Removed the repetitive “AI hanya membantu menyusun kata kunci” notice from the reference search popup. Search, abstract preview and citation workflow are unchanged.
+- Updated product documentation and added automated tests for literal replacement and UI elements.
+
+
 ## 2.9.1 — Abstract Preview for Reference Search
 
 - Click a publication result to expand or collapse its abstract before saving or citing.

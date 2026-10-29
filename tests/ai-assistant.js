@@ -31,6 +31,9 @@ const wait=t=>new Promise(r=>setTimeout(r,t));
   r=await call(`/api/projects/${id}/ai/chat`,'POST',{provider:'hermes',file:'main.tex',mode:'rewrite',message:'Improve academic writing',selection});
   assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.provider,'hermes');assert.equal(r.data.proposal.find,'TEST_AI_SNIPPET');
   const proposal=r.data.proposal.id;
+  // Explicit Replace mode used by the floating chat returns the same safely reviewable edit.
+  const replaceMode=await call(`/api/projects/${id}/ai/chat`,'POST',{provider:'hermes',file:'main.tex',mode:'replace',message:'Replace selected text while preserving LaTeX.',selection});
+  assert.equal(replaceMode.status,200,JSON.stringify(replaceMode.data));assert.equal(replaceMode.data.proposal.replace,'Improved academic sentence');
   r=await call(`/api/projects/${id}/file`,'PUT',{path:'main.tex',content:original+'\n% changed\n'});assert.equal(r.status,200);
   r=await call(`/api/projects/${id}/ai/apply`,'POST',{proposalId:proposal});assert.equal(r.status,409);
   r=await call(`/api/projects/${id}/ai/chat`,'POST',{provider:'hermes',file:'main.tex',mode:'rewrite',message:'Improve academic writing',selection});assert.equal(r.status,200,JSON.stringify(r.data));
@@ -40,7 +43,7 @@ const wait=t=>new Promise(r=>setTimeout(r,t));
   r=await call(`/api/projects/${id}/ai/chat`,'POST',{provider:'hermes',file:'../server.js',message:'Run dangerous code'});assert.equal(r.status,400);
   r=await call(`/api/projects/${id}/ai/chat`,'POST',{provider:'hermes',file:'main.tex',message:'Improve academic writing',mode:'explain'});assert.equal(r.status,200);assert.equal(r.data.proposal,null);
   const asset=await fetch(`http://127.0.0.1:${port}/ai-assistant.css`);assert.equal(asset.status,200);
-  for(const id of ['ai-drawer','ai-toolbar-open','ai-quick-selection','ai-input','ai-send'])assert(fs.readFileSync(path.join(root,'public','index.html'),'utf8').includes(`id="${id}"`));
+  for(const id of ['ai-drawer','ai-launcher','ai-quick-selection','ai-input','ai-send'])assert(fs.readFileSync(path.join(root,'public','index.html'),'utf8').includes(`id="${id}"`));
   console.log('[PASS] AI Hermes CLI, scoped selection, safe apply/backups, stale-file guard, explain-only, static assets');
  }finally{child.kill('SIGTERM');await wait(100);fs.rmSync(temp,{recursive:true,force:true})}
 })().catch(e=>{console.error('[FAIL]',e);process.exitCode=1});

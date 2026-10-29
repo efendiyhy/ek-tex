@@ -1,0 +1,14 @@
+/* Non-modal search and replacement controls above the active LaTeX editor. */
+.findbar{display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:10px 13px;background:var(--ui-panel,#1b2a3d);color:var(--ui-text,#d3e2f4);border-bottom:1px solid var(--ui-border,#33445a);height:auto;min-height:0}
+.findbar.hidden{display:none!important}
+.findbar-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.findbar-field{display:flex;align-items:center;gap:8px;min-width:0;color:var(--ui-muted,#9eb1c7);font-size:11px;white-space:nowrap}
+.findbar-field>span{min-width:74px}
+.findbar-field input{flex:1;width:100%;min-width:0;height:32px;background:var(--ui-surface,#101c2f);color:var(--ui-strong,#f2f6fa);border:1px solid var(--ui-border,#465871);border-radius:7px;padding:5px 10px;font-size:12px}
+.findbar-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.findbar-controls>span{font-size:11px;color:var(--ui-muted,#9cafc3);min-width:62px;margin-right:auto}
+.findbar-controls .mini-btn{padding:5px 9px;min-width:28px;font-size:14px}
+.findbar-controls .btn{font-size:11px;padding:6px 10px;min-height:29px}
+.findbar-toggle{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;color:var(--ui-text,#cad7e8);padding:4px 5px;cursor:pointer}
+.findbar-toggle input{width:14px;height:14px;margin:0;accent-color:var(--theme-accent,#2dbda6)}
+@media(max-width:950px){.findbar-fields{grid-template-columns:1fr}}

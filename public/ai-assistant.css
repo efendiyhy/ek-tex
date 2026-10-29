@@ -9,3 +9,22 @@
 .ai-compose{border-top:1px solid var(--border,#344456);padding:12px 13px 11px;background:var(--panel,#111c2d)}.ai-modes{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}.ai-modes button{border:1px solid var(--border,#344456);background:var(--bg,#17273a);color:inherit;padding:6px 9px;border-radius:16px;font-size:11px;cursor:pointer}.ai-modes button.active{border-color:var(--theme-accent,#2dbda6);color:var(--theme-accent,#2dbda6)}.ai-compose textarea{width:100%;box-sizing:border-box;min-height:72px;resize:vertical;background:var(--bg,#17273a);border:1px solid var(--border,#45596f);border-radius:8px;color:inherit;font:inherit;line-height:1.5;padding:10px}.ai-compose textarea:focus{outline:1px solid var(--theme-accent,#2dbda6)}.ai-compose-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}.ai-compose-bottom span{font-size:11px;color:var(--muted,#a0afc2);max-width:235px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ai-compose-bottom button{cursor:pointer;background:var(--theme-accent,#2dbda6);color:#0d1a24;border:0;border-radius:8px;padding:9px 16px;font-weight:750}.ai-compose-bottom button:disabled{opacity:.4}.ai-privacy-note{font-size:10px;line-height:1.45;color:var(--muted,#91a4ba);margin:9px 0 0}
 .ai-quick-selection{position:absolute;right:170px;top:11px;z-index:9;padding:6px 10px;background:var(--theme-accent,#2dbda6);border:0;color:#0e1b24;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer}.ai-quick-selection.hidden{display:none!important}
 @media(max-width:800px){.ai-drawer{top:52px;bottom:0;width:min(430px,100vw)}.ai-quick-selection{right:12px;top:49px}}
+
+/* v2.9.2: compact, floating chat window in the bottom-right. */
+.ai-popup{top:auto;left:auto;right:22px;bottom:84px;width:min(400px,calc(100vw - 32px));height:min(650px,calc(100dvh - 112px));max-height:none;border:1px solid var(--border,#344456);border-radius:17px;box-shadow:0 18px 65px #0008;overflow:hidden;z-index:29}
+.ai-popup .ai-drawer-head{padding:12px 15px 10px}
+.ai-popup .ai-drawer-head strong{font-size:16px}
+.ai-popup .ai-drawer-head small{font-size:9px}
+.ai-popup .ai-connection{padding:9px 13px}
+.ai-popup .ai-context{padding:7px 12px}
+.ai-popup .ai-messages{gap:9px;padding:12px}
+.ai-popup .ai-compose{padding:10px 12px}
+.ai-popup .ai-compose textarea{min-height:52px;max-height:100px;resize:vertical}
+.ai-popup .ai-modes{gap:4px}
+.ai-popup .ai-modes button{font-size:10px;padding:5px 7px}
+.ai-popup .ai-privacy-note{display:block;font-size:9px;line-height:1.35;margin:7px 0 0}
+.ai-launcher{position:fixed;right:24px;bottom:42px;z-index:29;display:flex;align-items:center;gap:9px;padding:12px 16px;border-radius:999px;border:1px solid color-mix(in srgb,var(--theme-accent,#2dbda6) 55%,transparent);background:var(--theme-accent,#2dbda6);color:#061c1a;font:700 12px var(--ui-font,system-ui);cursor:pointer;box-shadow:0 9px 29px #0007;transition:transform .16s,box-shadow .16s}
+.ai-launcher:hover{transform:translateY(-3px);box-shadow:0 13px 35px #0008}
+.ai-launcher.hidden{display:none!important}
+.ai-launcher-icon{font-size:19px;line-height:1}
+@media(max-width:660px){.ai-popup{right:8px;bottom:67px;width:calc(100vw - 16px);height:min(660px,calc(100dvh - 87px));border-radius:14px}.ai-launcher{right:13px;bottom:38px;padding:10px 13px}}

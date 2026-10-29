@@ -4,7 +4,7 @@
  const $=id=>document.getElementById(id);
  const panel=$('ai-drawer'),messages=$('ai-messages'),input=$('ai-input');
  const ui={mode:'ask',busy:false,history:[],activeProject:null,models:[],selection:null};
- const intro='Saya dapat membantu memperbaiki kalimat, menyusun paragraf akademik, menjelaskan LaTeX, atau menyarankan penggantian teks. Semua perubahan perlu persetujuan Anda.';
+ const intro='Blok teks di editor, pilih Ganti teks, kemudian tinjau hasil penggantian dari model AI sebelum menerapkan.';
  function storageKey(){return 'ektex-ai-history-'+(state.project?.id||'none')}
  function persist(){try{localStorage.setItem(storageKey(),JSON.stringify(ui.history.slice(-24)))}catch{}}
  function record(role,content){ui.history.push({role,content});ui.history=ui.history.slice(-24);persist()}
@@ -31,6 +31,7 @@
   $('ai-context-info').textContent=file?`File aktif: ${file}${ui.selection?.file===file?' · '+ui.selection.text.length+' karakter terpilih':''}`:'Buka file .tex untuk memakai asisten.';
   $('ai-selection-label').textContent=ui.selection?.file===file?'Konteks: teks terpilih':'Konteks: file aktif';
   $('ai-quick-selection').classList.toggle('hidden',!selection||state.view!=='editor');
+ $('ai-launcher').classList.toggle('hidden',state.view!=='editor');
  }
  async function status(){
   try{const s=await api('/api/ai/status');ui.models=s.models||[];$('ai-provider-status').textContent=`${s.hermes?'✓ Hermes tersedia':'Hermes belum ada'} · ${ui.models.length?ui.models.length+' model Ollama tersedia':'Ollama belum ada model'}`;
@@ -42,13 +43,13 @@
   }catch(e){$('ai-provider-status').textContent='Gagal mendeteksi AI: '+e.message;}
  }
  function syncProvider(){const provider=$('ai-provider').value;$('ai-model').disabled=provider==='hermes';localPref.set('ektex-ai-provider',provider)}
- function open(){if(!state.project||state.view!=='editor')return toast('Pilih proyek LaTeX dahulu.',true);loadHistory();updateContext();panel.classList.remove('hidden');status();input.focus()}
- function close(){panel.classList.add('hidden');$('ai-quick-selection').classList.add('hidden')}
- $('ai-toolbar-open').onclick=open;$('ai-rail-open').onclick=open;$('ai-close').onclick=close;
+ function open(){if(!state.project||state.view!=='editor')return toast('Pilih proyek LaTeX dahulu.',true);loadHistory();updateContext();panel.classList.remove('hidden');$('ai-launcher').setAttribute('aria-expanded','true');status();input.focus()}
+ function close(){panel.classList.add('hidden');$('ai-launcher').setAttribute('aria-expanded','false');$('ai-quick-selection').classList.add('hidden')}
+ $('ai-launcher').onclick=()=>panel.classList.contains('hidden')?open():close();$('ai-close').onclick=close;
  $('ai-provider').value=['auto','ollama','hermes'].includes(localPref.get('ektex-ai-provider'))?localPref.get('ektex-ai-provider'):'auto';
  $('ai-provider').onchange=syncProvider;$('ai-model').onchange=()=>localPref.set('ektex-ai-model',$('ai-model').value);
  $('ai-clear').onclick=()=>{ui.history=[];ui.selection=null;persist();resetView();updateContext();input.focus()};
- document.querySelectorAll('[data-ai-mode]').forEach(b=>b.onclick=()=>{ui.mode=b.dataset.aiMode;document.querySelectorAll('[data-ai-mode]').forEach(x=>x.classList.toggle('active',x===b));if(!input.value.trim()){const hints={ask:'Apa yang perlu diperbaiki pada dokumen saya?',grammar:'Perbaiki grammar teks yang saya pilih, tanpa mengubah makna.',rewrite:'Tulis ulang teks terpilih dengan gaya akademik yang lebih baik.',clarity:'Buat paragraf ini lebih jelas dan terstruktur.',latex:'Periksa sintaks LaTeX pada teks yang dipilih.',explain:'Jelaskan bagian LaTeX yang saya pilih.'};input.value=hints[ui.mode];}input.focus()});
+ document.querySelectorAll('[data-ai-mode]').forEach(b=>b.onclick=()=>{ui.mode=b.dataset.aiMode;document.querySelectorAll('[data-ai-mode]').forEach(x=>x.classList.toggle('active',x===b));if(!input.value.trim()){const hints={ask:'Apa yang perlu diperbaiki pada dokumen saya?',grammar:'Perbaiki grammar teks yang saya pilih, tanpa mengubah makna.',rewrite:'Tulis ulang teks terpilih dengan gaya akademik yang lebih baik.',replace:'Usulkan penggantian tepat untuk teks yang dipilih. Kembalikan satu edit yang bisa saya tinjau dan terapkan.',clarity:'Buat paragraf ini lebih jelas dan terstruktur.',latex:'Periksa sintaks LaTeX pada teks yang dipilih.',explain:'Jelaskan bagian LaTeX yang saya pilih.'};input.value=hints[ui.mode];}input.focus()});
  function proposalCard(proposal,project){
   const card=document.createElement('section');card.className='ai-proposal';
   const h=document.createElement('strong');h.textContent='Usulan perubahan · '+proposal.file;const note=document.createElement('div');note.textContent='Periksa teks di bawah. EK TeX tidak mengubah file sebelum disetujui.';card.append(h,note);
@@ -83,8 +84,10 @@
   finally{ui.busy=false;$('ai-send').disabled=false;$('ai-send').textContent='Kirim ↗';input.focus();updateContext()}
  }
  $('ai-send').onclick=send;input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
- $('ai-quick-selection').onclick=()=>{ui.selection=selected()||ui.selection;open();ui.mode='rewrite';document.querySelectorAll('[data-ai-mode]').forEach(b=>b.classList.toggle('active',b.dataset.aiMode==='rewrite'));input.value='Tulis ulang teks terpilih dengan bahasa akademik yang jelas, tanpa mengubah makna, persamaan, dan sitasi.';input.focus()};
+ $('ai-quick-selection').onclick=()=>{ui.selection=selected()||ui.selection;open();ui.mode='replace';document.querySelectorAll('[data-ai-mode]').forEach(b=>b.classList.toggle('active',b.dataset.aiMode==='replace'));input.value='Usulkan penggantian teks terpilih yang lebih jelas dan akademik, dengan makna, persamaan, dan sitasi tetap sama.';input.focus()};
  $('code-editor').addEventListener('mouseup',updateContext);$('code-editor').addEventListener('keyup',updateContext);$('tabs').addEventListener('click',()=>setTimeout(updateContext,50));
- $('project-picker').addEventListener('click',close);$('dashboard').addEventListener('click',()=>{if(state.view==='dashboard')close()});
+ $('project-picker').addEventListener('click',()=>{close();$('ai-launcher').classList.add('hidden')});$('dashboard').addEventListener('click',()=>{if(state.view==='dashboard'){close();$('ai-launcher').classList.add('hidden')}});
+ const workspace=$('editor-workspace');const observer=new MutationObserver(()=>{const visible=!workspace.classList.contains('hidden');$('ai-launcher').classList.toggle('hidden',!visible);if(!visible)close();});observer.observe(workspace,{attributes:true,attributeFilter:['class']});
+ $('ai-launcher').classList.toggle('hidden',workspace.classList.contains('hidden'));
  window.EKTeXAI={open,close,updateContext,loadHistory};
 })();

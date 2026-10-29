@@ -194,12 +194,47 @@ $('code-editor').addEventListener('keydown',e=>{const t=e.target,sel=t.selection
 window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveAll().then(()=>toast('Semua file tersimpan.')).catch(()=>{});}
  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&state.view==='editor'){e.preventDefault();buildPdf();}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='b'&&state.view==='editor'){e.preventDefault();toggleSidebar();}
- if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'&&$('overlay').classList.contains('hidden')){e.preventDefault();openFind();}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'&&$('overlay').classList.contains('hidden')){e.preventDefault();openFind(false);}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='h'&&state.view==='editor'&&$('overlay').classList.contains('hidden')){e.preventDefault();openFind(true);}
  if(e.key==='Escape'){hideSuggestions();closeModal();$('findbar').classList.add('hidden');}
 });
-function openFind(){$('findbar').classList.remove('hidden');$('find-input').focus();findNext();}
-function findNext(){const query=$('find-input').value,t=$('code-editor');if(!query){$('find-count').textContent='';return;}let pos=t.value.toLowerCase().indexOf(query.toLowerCase(),t.selectionEnd);if(pos<0)pos=t.value.toLowerCase().indexOf(query.toLowerCase());if(pos>=0){t.focus();t.setSelectionRange(pos,pos+query.length);$('find-count').textContent=`Found`;updateCursor();}else $('find-count').textContent='Not found';}
-$('find-code').onclick=openFind;$('find-next').onclick=findNext;$('find-input').onkeydown=e=>{if(e.key==='Enter')findNext()};$('find-close').onclick=()=>$('findbar').classList.add('hidden');
+// Text search is always literal (not regex); editing only affects the open file.
+const findEngine=window.EKTeXFindReplace;
+function findMatches(){return findEngine.occurrences($('code-editor').value,$('find-input').value,{caseSensitive:$('find-case').checked,wholeWord:$('find-word').checked});}
+function selectedMatch(matches){const t=$('code-editor');return matches.findIndex(m=>m.start===t.selectionStart&&m.end===t.selectionEnd);}
+function updateFindCount(){const matches=findMatches(),index=selectedMatch(matches);$('find-count').textContent=!$('find-input').value?'Masukkan teks':matches.length?`${index>=0?index+1+' / ':''}${matches.length} hasil`:'0 hasil';return matches;}
+function closeFind(){$('findbar').classList.add('hidden');$('code-editor').focus();}
+function openFind(showReplace=false){if(state.view!=='editor'||!state.active)return toast('Buka file teks terlebih dahulu.',true);
+ $('findbar').classList.remove('hidden');const editor=$('code-editor');const selected=editor.value.slice(editor.selectionStart,editor.selectionEnd);
+ if(selected&&selected.length<200&&!selected.includes('\n'))$('find-input').value=selected;
+ updateFindCount();(showReplace?$('replace-input'):$('find-input')).focus();if(!showReplace)$('find-input').select();}
+function findStep(direction=1){const matches=updateFindCount();if(!matches.length)return;const t=$('code-editor');
+ const current=selectedMatch(matches);let chosen;
+ if(current>=0)chosen=matches[(current+direction+matches.length)%matches.length];
+ else if(direction>0)chosen=matches.find(m=>m.start>=t.selectionEnd)||matches[0];
+ else chosen=[...matches].reverse().find(m=>m.end<=t.selectionStart)||matches[matches.length-1];
+ t.focus();t.setSelectionRange(chosen.start,chosen.end);updateCursor();updateFindCount();}
+function replaceCurrent(){if(!state.active)return;const matches=updateFindCount();if(!matches.length)return toast('Tidak ada teks yang cocok.',true);
+ const t=$('code-editor');const current=selectedMatch(matches);
+ const match=current>=0?matches[current]:(matches.find(m=>m.start>=t.selectionEnd)||matches[0]);
+ const replacement=$('replace-input').value;
+ const content=findEngine.applyOne(t.value,match,replacement);
+ changeEditor(content,match.start+replacement.length);
+ const remaining=updateFindCount(),next=remaining.find(m=>m.start>=match.start+replacement.length)||remaining[0];
+ if(next){t.setSelectionRange(next.start,next.end);updateCursor();updateFindCount();}
+ toast('1 kecocokan diganti di '+state.active);}
+function replaceEvery(){if(!state.active)return;const matches=updateFindCount();if(!matches.length)return toast('Tidak ada teks yang cocok.',true);
+ const result=findEngine.applyAll($('code-editor').value,matches,$('replace-input').value);
+ changeEditor(result.content,Math.min($('code-editor').selectionStart,result.content.length));updateFindCount();toast(`${result.count} kecocokan diganti di ${state.active}.`);}
+$('find-code').onclick=()=>openFind(true);
+$('find-next').onclick=()=>findStep(1);$('find-prev').onclick=()=>findStep(-1);
+$('find-input').addEventListener('input',updateFindCount);
+$('find-case').addEventListener('change',updateFindCount);$('find-word').addEventListener('change',updateFindCount);
+$('find-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();findStep(e.shiftKey?-1:1);}});
+$('replace-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(e.ctrlKey||e.metaKey)replaceEvery();else replaceCurrent();}});
+$('replace-one').onclick=replaceCurrent;$('replace-all').onclick=replaceEvery;
+$('find-close').onclick=closeFind;
+$('code-editor').addEventListener('input',()=>{if(!$('findbar').classList.contains('hidden'))updateFindCount()});
 function toggleConsole(force){const show=force===undefined?$('console').classList.contains('hidden'):force;$('console').classList.toggle('hidden',!show)}
 $('toggle-console').onclick=()=>toggleConsole();$('close-console').onclick=()=>toggleConsole(false);$('copy-log').onclick=()=>{navigator.clipboard?.writeText(state.log).then(()=>toast('Log tersalin.')).catch(()=>toast('Clipboard tidak tersedia.',true))};
 function activeTex(){return state.active?.toLowerCase().endsWith('.tex')?state.active:null;}

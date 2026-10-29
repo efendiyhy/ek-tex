@@ -24,6 +24,7 @@ Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet d
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Updating EK TeX](#updating-ek-tex)
+- [Find and Replace](#find-and-replace)
 - [AI Writing Assistant](#ai-writing-assistant)
 - [Reference Discovery](#reference-discovery)
 - [AI-assisted Reference Keywords](#ai-assisted-reference-keywords)
@@ -38,16 +39,20 @@ Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet d
 | Module | Capabilities |
 |---|---|
 | Workspace | Dashboard daftar proyek, create/rename/delete, import/export ZIP |
-| Source editor | Syntax highlighting, autosave, multi-tab, LaTeX autocomplete, error-line highlighting, minimizable sidebar |
+| Source editor | Syntax highlighting, autosave, multi-tab, **Find & Replace / Replace All**, LaTeX autocomplete, error-line highlighting, minimizable sidebar |
 | PDF compiler | pdfLaTeX, XeLaTeX, LuaLaTeX via `latexmk`; active-file compilation, PDF preview, Clean & Recompile, live log, Stop |
 | Bibliography | Dedicated popup for title/author/DOI search, expandable **abstract preview** from Crossref or OpenAlex, and BibTeX import |
 | Contextual reference lookup | Highlight a sentence → **Cari Referensi** → editable keyword extraction → search and optionally insert `\cite{key}` |
-| AI Writing Assistant | Project-aware chat, selection-aware rewrite/grammar/clarity/LaTeX help, preview of proposed changes and approval-only apply, Hermes or Ollama model |
+| AI Writing Assistant | Floating AI chat at bottom-right, selected-text replacement, grammar/academic/LaTeX assistance, reviewable changes, Hermes or Ollama model |
 | Optional Hermes integration | Keyword suggestions and source-code diagnostics when Hermes Agent has been installed and configured |
 | Document conversion | DOCX, ODT, Markdown and HTML conversions through Pandoc; converted LaTeX becomes a separate project |
 | Appearance | Emerald, Ocean Blue, Amethyst, Copper; light and dark modes saved in the browser |
 
 ![EK TeX editor dark theme](docs/editor-dark-v27.png)
+
+![AI Assistant floating beside the LaTeX source editor](docs/ai-floating-v292.png)
+
+<sub>Floating AI Chat and Find & Replace bar in EK TeX v2.9.2.</sub>
 
 ## Requirements
 
@@ -97,16 +102,22 @@ The updater uses `git pull --ff-only origin main` and stops if tracked source fi
 
 **Manual ZIP update:** Extract the *Update Only* archive over the source code and replace matching files. **Do not replace `workspace/` or project data.** If the browser still shows old styles, press `Ctrl+Shift+R`.
 
+## Find and Replace
+
+Open a project and a source file, then choose **Find & Replace** in the editor toolbar or use **Ctrl+H**. The compact bar includes a literal-text search, a replacement field, previous/next navigation, **Ganti**, and **Ganti semua**. Optional **Aa** (case-sensitive) and **Kata utuh** (whole-word) filters help target exact matches. Only the **currently open source file** is edited; other project files are untouched.
+
+**Ctrl+F** focuses search without closing the editor. Enter finds the next occurrence (Shift+Enter finds the previous one), and Escape closes the search bar. The text editor marks the file as unsaved and existing autosave writes the changes; use **Ctrl+S** to save immediately. For important documents, export a project ZIP before making broad replacements.
+
 ## AI Writing Assistant
 
-EK TeX provides a **project-scoped writing assistant** through the **✦ AI Chat** toolbar button or the assistant icon in the editor rail. The chat can read the active `.tex` file and the text selected in that file. It supports general questions, academic rewriting, grammar correction, clarity suggestions, LaTeX help, and explanations.
+EK TeX provides a **project-scoped floating chat** opened through the **✦ AI Assistant** button at the bottom-right of the editor. The chat can read the active `.tex` file and the text selected in that file. It supports general questions, academic rewriting, grammar correction, clarity suggestions, LaTeX help, and explanations.
 
 **Model connection** (choose provider inside the AI panel):
 
 - **Hermes Agent:** If `hermes` is already installed and its model/provider configured, select *Hermes Agent* (or *Auto*). You can check it with `hermes --version`. Hermes CLI runs non-interactively with a temporary prompt file and is not granted the local project path.
 - **Ollama:** Install Ollama, download a compatible chat model, for example `ollama pull llama3.2`, and ensure the local Ollama server is listening at `127.0.0.1:11434` (or set `EKTEX_OLLAMA_PORT` for another loopback port). Available local models are listed automatically in the panel. EK TeX communicates with the loopback-only Ollama endpoint; it does not install or download models without the user's action.
 
-**Workflow:** Open a `.tex` file → optionally select a sentence/paragraph → click **✦ AI Chat** → choose task and type a request → review the response. If the model returns a valid replacement proposal, EK TeX displays a **before/after comparison** and **Terapkan perubahan** button. It never silently edits a project. On approval, EK TeX creates a backup and refuses to overwrite a file that has changed since the proposal was made. A selected-text replacement must exactly match the selected text. The AI chat has a *Percakapan baru* control; recent chat text is kept only in that browser's local storage for this project and is not included in ZIP exports. Temporary edit proposals expire after 15 minutes.
+**Workflow:** Open a `.tex` file → optionally select a sentence/paragraph → click the **AI Assistant** floating button → choose **Ganti teks** or another task and type a request → review the response. If the model returns a valid replacement proposal, EK TeX displays a **before/after comparison** and **Terapkan perubahan** button. It never silently edits a project. On approval, EK TeX creates a backup and refuses to overwrite a file that has changed since the proposal was made. A selected-text replacement must exactly match the selected text. Minimize the chat with **X** to return to the editor; the floating launcher remains available. The AI chat has a *Percakapan baru* control; recent chat text is kept only in that browser's local storage for this project and is not included in ZIP exports. Temporary edit proposals expire after 15 minutes.
 
 **Context & privacy:** The active document context is truncated for large files (up to approximately 18,000 characters); selected text is limited to 14,000 characters. The context and a short conversation history are sent to the selected model when you press **Kirim**. Hermes may use a third-party provider depending on your configuration; Ollama can run entirely locally. **Do not include confidential data unless you accept how your configured model processes it.** Responses are suggestions; verify all academic claims, calculations, citations and LaTeX syntax yourself. The AI assistant does not execute LaTeX or shell commands.
 
@@ -164,6 +175,8 @@ For `\include{Isi/Bab1}`, the application prepares corresponding subdirectories 
 | `Ctrl+Enter` | Compile current `.tex` file |
 | `Ctrl+B` | Collapse / expand sidebar |
 | `Ctrl+F` | Find in open source file |
+| `Ctrl+H` | Open Find & Replace |
+| `Enter` / `Shift+Enter` (search bar) | Next / previous match |
 | `\` | LaTeX command suggestions |
 | `↑` / `↓`, `Enter` / `Tab` | Navigate and accept suggestions |
 | `Escape` | Close standard dialogs and autocomplete (**not** the reference search popup) |
@@ -196,4 +209,4 @@ npm test
 
 **Official website:** [ek-instrumentation.com](https://ek-instrumentation.com)  
 **GitHub:** [efendiyhy/ek-tex](https://github.com/efendiyhy/ek-tex)  
-**Release:** 2.9.1
+**Release:** 2.9.2
