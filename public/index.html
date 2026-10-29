@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/editor-features.css">
 <link rel="stylesheet" href="/reference-ui.css">
+<link rel="stylesheet" href="/ai-assistant.css">
 </head>
 <body>
 <div id="app">
@@ -24,7 +25,7 @@
 </header>
 <section class="dashboard" id="dashboard" aria-label="Daftar proyek LaTeX">
   <div class="dash-shell">
-    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.8</div>
+    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.9</div>
     <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-settings" title="Pengaturan tema dan tampilan">⚙ Pengaturan</button><button class="btn outline" id="dashboard-references">⌕ Referensi</button><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
     <div class="dash-overview"><div class="dash-stat"><span>PROYEK</span><strong id="dash-count">0</strong><small>tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Pemeriksaan awal</small></div><div class="dash-stat dash-stat-side"><span>IMPOR</span><button id="dashboard-import" class="dash-quick">⇧ Proyek ZIP <span>↗</span></button><small>Overleaf atau ZIP lokal</small></div></div>
     <div class="dash-library-head"><div><h2>Proyek saya</h2><span id="dash-subtitle">Semua proyek</span></div><label class="dash-search">⌕ <input id="dashboard-search" type="search" placeholder="Cari nama proyek..." aria-label="Cari proyek"></label></div>
@@ -37,6 +38,7 @@
   <button class="railbtn active" data-side="files" title="File proyek"><svg viewBox="0 0 24 24"><path d="M3 7V4h7l2 3h9v13H3z"/></svg></button>
   <button class="railbtn" data-side="references" title="Referensi Online"><svg viewBox="0 0 24 24"><path d="M4 4h14v16H6a2 2 0 0 1-2-2zm4 4h7M8 12h7M8 16h4"/></svg></button>
   <button class="railbtn" data-side="tools" title="Debugger AI dan Converter">✦</button>
+  <button class="railbtn" id="ai-rail-open" title="Asisten AI penulisan">☷</button>
   <button class="railbtn" data-side="templates" title="Template dan snippet"><svg viewBox="0 0 24 24"><path d="M7 3h10l4 4v14H3V3zM7 11h10M7 15h10M7 7h5"/></svg></button>
   <div class="rail-spacer"></div>
   <button class="railbtn" id="show-shortcuts" title="Pintasan keyboard">?</button>
@@ -75,9 +77,9 @@
  </aside>
  <main class="main">
   <div class="editor-top"><div class="tabs" id="tabs"></div><div class="tab-actions"><button id="toggle-console" class="tab-act" title="Log hasil kompilasi">≡</button></div></div>
-  <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari di file (Ctrl+F)">⌕ Find</button><span class="vline"></span><button class="toolbtn" id="open-reference-search">⌕ Referensi</button><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
+  <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari di file (Ctrl+F)">⌕ Find</button><span class="vline"></span><button class="toolbtn" id="open-reference-search">⌕ Referensi</button><button class="toolbtn ai-toolbar-button" id="ai-toolbar-open" title="Buka asisten penulisan AI">✦ AI Chat</button><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
   <div class="findbar hidden" id="findbar"><input id="find-input" placeholder="Cari di dokumen..."/><span id="find-count"></span><button id="find-next" class="mini-btn">↓</button><button id="find-close" class="mini-btn">✕</button></div>
-  <div class="editor-surface"><button id="reference-selection-action" class="reference-selection-action hidden" type="button" title="Temukan publikasi yang mendukung teks terpilih">⌕ Cari Referensi</button><div class="line-numbers" id="line-numbers" aria-label="Nomor baris">1</div><div class="code-container"><pre id="syntax-layer" aria-hidden="true"></pre><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="LaTeX source code" aria-autocomplete="list" aria-controls="latex-suggestions"></textarea><div id="latex-suggestions" class="latex-suggestions hidden" role="listbox" aria-label="Saran perintah LaTeX"></div></div></div>
+  <div class="editor-surface"><button id="ai-quick-selection" class="ai-quick-selection hidden" type="button" title="Perbaiki teks terpilih dengan asisten AI">✦ Perbaiki tulisan</button><button id="reference-selection-action" class="reference-selection-action hidden" type="button" title="Temukan publikasi yang mendukung teks terpilih">⌕ Cari Referensi</button><div class="line-numbers" id="line-numbers" aria-label="Nomor baris">1</div><div class="code-container"><pre id="syntax-layer" aria-hidden="true"></pre><textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="LaTeX source code" aria-autocomplete="list" aria-controls="latex-suggestions"></textarea><div id="latex-suggestions" class="latex-suggestions hidden" role="listbox" aria-label="Saran perintah LaTeX"></div></div></div>
   <div class="editor-status"><span id="cursor-position">Ln 1, Col 1</span><span class="divider-small"></span><span id="file-type">LaTeX</span><div class="grow"></div><span>UTF-8</span><span class="divider-small"></span><span>Spaces: 2</span><span class="divider-small"></span><span id="file-status">Ready</span></div>
   <div class="console hidden" id="console"><div class="console-head"><strong>OUTPUT · COMPILE LOG</strong><div><button id="open-debugger" title="Analisis log">⚑ Debug</button><button id="copy-log" title="Salin log">Copy</button><button id="close-console" title="Tutup">✕</button></div></div><div id="build-summary" class="build-summary hidden" aria-live="polite"></div><pre id="log-text">Belum ada log kompilasi.</pre></div>
  </main>
@@ -88,8 +90,16 @@
   <div class="preview-footer"><span><i class="footer-dot"></i> Local rendering</span><button id="preview-help">Panduan PDF ↗</button></div>
  </section>
 </div>
-<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v2.8</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
+<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v2.9</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
 </div>
+<!-- Optional AI model connection. No auto edits or code execution. -->
+<aside class="ai-drawer hidden" id="ai-drawer" role="complementary" aria-label="Asisten AI EK TeX">
+ <div class="ai-drawer-head"><div><small>EK TeX · WRITING ASSISTANT</small><strong>✦ Asisten AI</strong></div><button id="ai-close" title="Tutup asisten" aria-label="Tutup asisten AI">✕</button></div>
+ <div class="ai-connection"><label for="ai-provider">Penyedia AI</label><div class="ai-model-row"><select id="ai-provider"><option value="auto">Auto (Hermes / Ollama)</option><option value="hermes">Hermes Agent</option><option value="ollama">Ollama Lokal</option></select><select id="ai-model" aria-label="Model Ollama" title="Model Ollama"></select></div><div id="ai-provider-status" class="ai-provider-status">Mendeteksi penyedia AI...</div></div>
+ <div class="ai-context"><span id="ai-context-info">Pilih proyek dan file .tex untuk memberikan konteks.</span><button id="ai-clear" title="Hapus riwayat percakapan" type="button">Percakapan baru</button></div>
+ <div id="ai-messages" class="ai-messages" aria-live="polite"><div class="ai-welcome">Saya dapat membantu memperbaiki kalimat, menyusun paragraf akademik, menjelaskan LaTeX, atau menyarankan penggantian teks. Semua perubahan perlu persetujuan Anda.</div></div>
+ <div class="ai-compose"><div class="ai-modes" role="group" aria-label="Tugas AI"><button type="button" data-ai-mode="ask" class="active">Chat</button><button type="button" data-ai-mode="grammar">Grammar</button><button type="button" data-ai-mode="rewrite">Akademik</button><button type="button" data-ai-mode="clarity">Kejelasan</button><button type="button" data-ai-mode="latex">LaTeX</button><button type="button" data-ai-mode="explain">Jelaskan</button></div><textarea id="ai-input" rows="3" placeholder="Misalnya: Perbaiki paragraf yang saya pilih tanpa mengubah makna ilmiahnya..."></textarea><div class="ai-compose-bottom"><span id="ai-selection-label">Konteks: file aktif</span><button id="ai-send" type="button">Kirim ↗</button></div><p class="ai-privacy-note">Konteks teks dikirim ke model yang Anda pilih. Hermes dapat menggunakan penyedia online; Ollama berjalan melalui server lokal. Periksa semua saran sebelum diterapkan.</p></div>
+</aside>
 <!-- Dialog pencarian khusus: ditutup hanya dengan tombol X. -->
 <div id="reference-overlay" class="reference-overlay hidden" role="presentation">
  <section class="reference-dialog" role="dialog" aria-modal="true" aria-labelledby="reference-dialog-title" tabindex="-1">
@@ -111,4 +121,5 @@
 <script src="/editor-features.js"></script>
 <script src="/app.js"></script>
 <script src="/reference-ui.js"></script>
+<script src="/ai-assistant.js"></script>
 </body></html>
