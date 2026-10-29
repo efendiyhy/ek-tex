@@ -6,6 +6,7 @@
  const overlay=$('reference-overlay'),dialog=overlay.querySelector('.reference-dialog'),floating=$('reference-selection-action');
  const editor=$('code-editor');
  let selection=null,requestSerial=0,lastFocus=null,results=[],working=false;
+ const abstractCache=new Map();
  const open=()=>!overlay.classList.contains('hidden');
  const text=(id,value)=>{$(id).textContent=value};
  function snapshot(){
@@ -82,8 +83,58 @@
    if(!items.length){setResultsMessage('Publikasi tidak ditemukan. Coba kata kunci lebih singkat, atau gunakan DOI.');return;}
    for(const record of items){
      const c=document.createElement('article');c.className='reference-item';
-     const h=document.createElement('h3');h.textContent=record.title||'Tanpa judul';c.append(h);
+     const heading=document.createElement('button');heading.type='button';heading.className='reference-item-heading';
+     heading.setAttribute('aria-expanded','false');heading.setAttribute('aria-label','Baca abstrak: '+(record.title||'Tanpa judul'));
+     const h=document.createElement('h3');h.textContent=record.title||'Tanpa judul';
+     const caret=document.createElement('span');caret.className='reference-item-caret';caret.textContent='⌄';caret.setAttribute('aria-hidden','true');
+     heading.append(h,caret);c.append(heading);
      const m=document.createElement('p');m.className='reference-item-meta';m.textContent=[String(record.authors||'').replace(/ and /g,', ').slice(0,220),[record.venue,record.year].filter(Boolean).join(' · ')].filter(Boolean).join('  |  ');c.append(m);
+     const hint=document.createElement('p');hint.className='reference-open-hint';hint.textContent='Klik publikasi untuk membaca abstrak';c.append(hint);
+     const abstractPanel=document.createElement('section');abstractPanel.className='reference-abstract hidden';
+     abstractPanel.setAttribute('aria-label','Abstrak publikasi');c.append(abstractPanel);
+     let requested=false;
+     const setAbstract=(abstract,source)=>{
+       abstractPanel.replaceChildren();
+       const label=document.createElement('strong');label.textContent='Abstrak';abstractPanel.append(label);
+       if(abstract){
+         const paragraph=document.createElement('p');paragraph.className='reference-abstract-text';paragraph.textContent=abstract;abstractPanel.append(paragraph);
+         const attribution=document.createElement('small');attribution.textContent='Sumber abstrak: '+(source||'metadata publikasi');abstractPanel.append(attribution);
+       }else{
+         const missing=document.createElement('p');missing.className='reference-abstract-empty';
+         missing.textContent=record.doi?'Abstrak tidak ditemukan melalui Crossref atau OpenAlex, atau layanan sedang tidak dapat diakses. Gunakan DOI untuk melihat artikel pada penerbit.':'Abstrak tidak disertakan pada metadata hasil pencarian, dan DOI tidak tersedia untuk mencari ke sumber lain.';
+         abstractPanel.append(missing);
+       }
+     };
+     const toggleAbstract=async()=>{
+       const expanding=abstractPanel.classList.contains('hidden');
+       abstractPanel.classList.toggle('hidden',!expanding);
+       heading.setAttribute('aria-expanded',String(expanding));
+       c.classList.toggle('reference-expanded',expanding);
+       hint.textContent=expanding?'Klik lagi untuk menyembunyikan abstrak':'Klik publikasi untuk membaca abstrak';
+       if(!expanding||requested)return;
+       requested=true;
+       if(record.abstract){setAbstract(record.abstract,record.abstractSource||'Crossref');return;}
+       if(!record.doi){setAbstract('',null);return;}
+       const cached=abstractCache.get(record.doi.toLowerCase());
+       if(cached){setAbstract(cached.abstract,cached.source);return;}
+       const loading=document.createElement('p');loading.className='reference-abstract-loading';loading.textContent='Mengambil abstrak dari Crossref / OpenAlex…';abstractPanel.append(loading);
+       const serial=requestSerial;
+       try{
+         const data=await bridge.api('/api/references/abstract?doi='+encodeURIComponent(record.doi));
+         if(serial!==requestSerial||!c.isConnected)return;
+         abstractCache.set(record.doi.toLowerCase(),data);
+         // Keep the panel collapsed if the reader closed it during the request.
+         setAbstract(data.abstract||'',data.source);
+       }catch(e){
+         if(serial!==requestSerial||!c.isConnected)return;
+         abstractPanel.replaceChildren();
+         const error=document.createElement('p');error.className='reference-abstract-empty';
+         error.textContent='Abstrak belum dapat dimuat: '+e.message+'. Coba lagi saat internet tersedia.';abstractPanel.append(error);
+         requested=false;
+       }
+     };
+     heading.onclick=toggleAbstract;
+     c.onclick=e=>{if(!e.target.closest('a,button,input,textarea'))toggleAbstract();};
      const foot=document.createElement('div');foot.className='reference-item-actions';
      if(record.doi){const doi=document.createElement('a');doi.textContent='DOI: '+record.doi;doi.href='https://doi.org/'+encodeURI(record.doi);doi.target='_blank';doi.rel='noopener noreferrer';foot.append(doi);}
      const save=makeButton('＋ Simpan ke BibTeX',async()=>{

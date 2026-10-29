@@ -1,0 +1,36 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {fromCrossref,fromOpenAlex,normalizedDoi,resolveAbstract,cleanText} = require('../lib/reference-abstract');
+assert.equal(fromCrossref({abstract:'<jats:p>Useful <jats:italic>methods</jats:italic> &amp; data.</jats:p>'}),'Useful methods & data.');
+assert.equal(cleanText('<script>alert(1)</script><p>ABC &lt; DEF &alpha; &#945;</p>'),'ABC < DEF α α');
+assert.equal(fromOpenAlex({The:[0],data:[1],improve:[2],results:[3]}),'The data improve results');
+assert.equal(normalizedDoi('https://doi.org/10.1016/j.example.2024.1'),'10.1016/j.example.2024.1');
+assert.equal(normalizedDoi('https://example.net/malware'),null);
+assert.equal(normalizedDoi('bad'),null);
+const root=path.join(__dirname,'..');
+const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
+const ui=fs.readFileSync(path.join(root,'public/reference-ui.js'),'utf8');
+const css=fs.readFileSync(path.join(root,'public/reference-ui.css'),'utf8');
+assert.match(html,/klik hasil untuk membaca abstrak/i);
+assert.match(ui,/reference-item-heading/);
+assert(ui.includes('/api/references/abstract?doi='));
+assert.match(ui,/reference-abstract-empty/);
+assert.match(css,/reference-abstract-text/);
+(async()=>{
+  let calls=[];
+  const crossref=await resolveAbstract('10.1234/first',async url=>{calls.push(url);return {message:{abstract:'<p>Crossref research text.</p>'}}});
+  assert.equal(crossref.source,'Crossref');assert.equal(crossref.abstract,'Crossref research text.');assert.equal(calls.length,1);
+  calls=[];
+  const fallback=await resolveAbstract('10.1234/second',async url=>{
+    calls.push(url);
+    if(url.includes('crossref.org'))return {message:{}};
+    return {abstract_inverted_index:{OpenAlex:[0],fallback:[1],abstract:[2]}};
+  });
+  assert.equal(fallback.source,'OpenAlex');assert.equal(fallback.abstract,'OpenAlex fallback abstract');assert.equal(calls.length,2);
+  const empty=await resolveAbstract('10.1234/third',async url=>{throw new Error('network unavailable')});
+  assert.equal(empty.available,false);assert.equal(empty.abstract,'');
+  await assert.rejects(()=>resolveAbstract('http://random.website/path',async()=>null),/DOI tidak valid/);
+  console.log('[PASS] Crossref JATS, OpenAlex fallback, safe plain-text, missing abstracts and DOI validation.');
+})().catch(e=>{console.error(e);process.exitCode=1});

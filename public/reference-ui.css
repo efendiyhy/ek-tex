@@ -14,3 +14,18 @@
 @media(max-width:660px){.reference-overlay{padding:5px}.reference-dialog{height:97vh;width:100vw}.reference-header{padding:16px}.reference-body{padding:15px}.reference-search-grid{grid-template-columns:1fr}.reference-doi-line,.reference-keywords-line{flex-direction:column}.reference-ai-bar{flex-wrap:wrap}}
 /* Floating selection action is positioned within the source editing surface. */
 .editor-surface{position:relative}
+
+/* Expandable bibliographic abstracts (Crossref first, OpenAlex fallback). */
+.reference-item{cursor:pointer;transition:border-color .15s ease,background-color .15s ease}
+.reference-item:hover,.reference-expanded{border-color:var(--theme-accent,#45c8af)}
+.reference-item-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;width:100%;padding:0;background:none;border:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.reference-item-heading:focus-visible{outline:2px solid var(--theme-accent,#45c8af);outline-offset:5px;border-radius:3px}
+.reference-item-caret{color:var(--theme-accent,#45c8af);font-size:22px;line-height:1.1;transition:transform .2s}
+.reference-expanded .reference-item-caret{transform:rotate(180deg)}
+.reference-open-hint{font-size:11px;color:var(--theme-accent,#4fcbb8);margin:2px 0 12px}
+.reference-abstract{margin:4px 0 16px;padding:15px 17px;border:1px solid var(--ui-border,#34465f);border-left:3px solid var(--theme-accent,#4fcbb8);background:var(--ui-surface,#18283b);border-radius:8px;cursor:auto}
+.reference-abstract strong{display:block;font-size:12px;margin-bottom:10px;color:var(--ui-strong,#f5f7ff)}
+.reference-abstract-text{font-size:12px;line-height:1.75;color:var(--ui-text,#d4deea);white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow-y:auto;margin:0 0 10px}
+.reference-abstract small,.reference-abstract-loading,.reference-abstract-empty{font-size:11px;line-height:1.6;color:var(--ui-muted,#a0b4c8)}
+.reference-abstract-loading,.reference-abstract-empty{margin:0}
+.reference-item-actions{cursor:default}

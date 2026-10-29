@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const {spawn, spawnSync} = require('child_process');
 const {prepareIncludeAuxDirectories} = require('./lib/latex-build-dirs');
 const {keywordsFallback,parseKeywordResponse,normaliseKeywordInput} = require('./lib/reference-keywords');
+const {fromCrossref,normalizedDoi,resolveAbstract} = require('./lib/reference-abstract');
 const {parseAssistant,editableReplacement,boundedHistory,contextExcerpt} = require('./lib/ai-assistant');
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
@@ -216,10 +217,10 @@ async function extractReferenceKeywords(d){
 }
 function httpsJson(url){return new Promise((resolve,reject)=>{
  const req=https.get(url,{headers:{'Accept':'application/json','User-Agent':'LaTeXStudioLocal/1.0 (local research editor)'},timeout:14000},res=>{
-  if(res.statusCode!==200){res.resume();return reject(fail(502,'Crossref memberikan respons HTTP '+res.statusCode));}
+  if(res.statusCode!==200){res.resume();return reject(fail(502,'Layanan metadata memberikan respons HTTP '+res.statusCode));}
   let n=0,chunks=[];res.on('data',c=>{n+=c.length;if(n>3*1024*1024){req.destroy();return;}chunks.push(c)});
   res.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))}catch{reject(fail(502,'Respons metadata tidak valid.'))}});
- });req.on('timeout',()=>req.destroy(new Error('Koneksi ke Crossref timeout')));req.on('error',reject);
+ });req.on('timeout',()=>req.destroy(new Error('Koneksi metadata timeout')));req.on('error',reject);
 });}
 function escapeBib(s){return String(s||'').replace(/[\r\n]+/g,' ').replace(/[{}]/g,'').replace(/\\/g,'').replace(/\s+/g,' ').trim();}
 function crossrefBib(m){
@@ -230,8 +231,9 @@ function crossrefBib(m){
  let fields={author:authors,title,year,journal:venue,volume:m.volume,number:m.issue,pages:m.page,doi,url:m.URL,publisher:m.publisher};
  const type=m.type==='book'?'book':m.type==='proceedings-article'?'inproceedings':m.type==='book-chapter'?'incollection':'article';
  if(type==='inproceedings'||type==='incollection'){fields.booktitle=fields.journal;delete fields.journal;}
+ const abstract=fromCrossref(m);
  const bib=`@${type}{${key},\n`+Object.entries(fields).filter(([k,v])=>v).map(([k,v])=>`  ${k} = {${escapeBib(v)}},`).join('\n').replace(/,$/,'')+`\n}\n`;
- return {key,doi,title,authors,year,venue,type,bib};
+ return {key,doi,title,authors,year,venue,type,bib,abstract,abstractSource:abstract?'Crossref':null};
 }
 function filesForZip(dir,rel=''){
  let all=[];for(const e of fs.readdirSync(path.join(dir,rel),{withFileTypes:true})){
@@ -538,6 +540,11 @@ async function router(req,res){
    if(author)params.set('query.author',author);
    const data=await httpsJson('https://api.crossref.org/works?'+params.toString());
    return json(res,(data.message?.items||[]).map(crossrefBib));
+ }
+ if(p==='/api/references/abstract'&&method==='GET'){
+   const doi=normalizedDoi(url.searchParams.get('doi'));
+   if(!doi)throw fail(400,'Masukkan DOI yang valid untuk membaca abstrak.');
+   return json(res,await resolveAbstract(doi,httpsJson));
  }
  if(p==='/api/references/keywords'&&method==='POST')return json(res,await extractReferenceKeywords(await body(req,7000)));
  if(p==='/api/doi'&&method==='GET'){

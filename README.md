@@ -40,7 +40,7 @@ Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet d
 | Workspace | Dashboard daftar proyek, create/rename/delete, import/export ZIP |
 | Source editor | Syntax highlighting, autosave, multi-tab, LaTeX autocomplete, error-line highlighting, minimizable sidebar |
 | PDF compiler | pdfLaTeX, XeLaTeX, LuaLaTeX via `latexmk`; active-file compilation, PDF preview, Clean & Recompile, live log, Stop |
-| Bibliography | **Dedicated reference popup** with title, author and DOI search; BibTeX metadata from Crossref |
+| Bibliography | Dedicated popup for title/author/DOI search, expandable **abstract preview** from Crossref or OpenAlex, and BibTeX import |
 | Contextual reference lookup | Highlight a sentence → **Cari Referensi** → editable keyword extraction → search and optionally insert `\cite{key}` |
 | AI Writing Assistant | Project-aware chat, selection-aware rewrite/grammar/clarity/LaTeX help, preview of proposed changes and approval-only apply, Hermes or Ollama model |
 | Optional Hermes integration | Keyword suggestions and source-code diagnostics when Hermes Agent has been installed and configured |
@@ -118,7 +118,21 @@ Access **Cari Referensi** from the dashboard, editor toolbar, or references icon
 2. **Author:** Filters Crossref results by author. Can be combined with title.
 3. **DOI:** Fetches a publication directly when its DOI is known.
 
-The popup does **not** close when clicking outside or pressing Escape. Only the **X** button closes it, including during a pending search. A source result can be saved to the active project's `references.bib`; duplicate DOI checks prevent repeated imports. When opened from the dashboard without a project, searching is possible, but saving requires opening a project.
+The popup does **not** close when clicking outside or pressing Escape. Only the **X** button closes it, including during a pending search.
+
+### Read an abstract before citing
+
+1. Search by **title**, **author**, or **DOI**.
+2. **Click a publication title or result card** to expand its abstract. Click again to collapse it.
+3. The abstract is displayed **in plain text**, labelled with the metadata source. EK TeX first checks the abstract returned by Crossref; if absent, it looks up the DOI and attempts to reconstruct the abstract from OpenAlex metadata.
+4. Review the title, authors, abstract and DOI before clicking **Simpan ke BibTeX** or **Simpan & kutip** (the latter is offered when a source passage was selected).
+5. If neither provider exposes an abstract, EK TeX explains that the preview is unavailable and keeps a link to the original DOI.
+
+![Reference search with an expanded abstract](docs/reference-abstract-v291.png)
+
+<sub>Illustrative UI test with simulated publication metadata; not a claim about a real research article.</sub>
+
+A source result can be saved to the active project's `references.bib`; duplicate DOI checks prevent repeated imports. When opened from the dashboard without a project, searching is possible, but saving requires opening a project. **EK TeX does not generate or fabricate abstracts using AI.** Abstract availability varies by publisher, service and network connection.
 
 The publication title, author list, venue, year, and DOI come from the provider metadata. **No citation is fabricated by the AI.** Check every publication before relying on it for an academic claim.
 
@@ -170,7 +184,8 @@ npm test
 ## Privacy and Limitations
 
 - Server listens on `127.0.0.1` and stores projects locally. Do not expose the service publicly without additional authentication and network safeguards.
-- The reference popup queries Crossref over HTTPS. Internet access is needed; Crossref availability and metadata coverage may vary.
+- The reference popup queries Crossref and, if needed for abstracts, OpenAlex over HTTPS. Internet access is needed, and provider coverage/rate limits can affect availability.
+- Some abstracts may be subject to publisher copyright; their preview is for evaluating references and does not imply unrestricted reuse.
 - AI-assisted keywords use the machine's existing Hermes configuration; remote providers, when configured, have their own privacy policies.
 - Manual review is required before citing a source. Bibliography metadata can be incomplete or inaccurate.
 - DOCX → LaTeX conversion may need editing for equations, tables, cross-references, and images.
@@ -181,4 +196,4 @@ npm test
 
 **Official website:** [ek-instrumentation.com](https://ek-instrumentation.com)  
 **GitHub:** [efendiyhy/ek-tex](https://github.com/efendiyhy/ek-tex)  
-**Release:** 2.8.0
+**Release:** 2.9.1

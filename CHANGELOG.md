@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.9.1 — Abstract Preview for Reference Search
+
+- Click a publication result to expand or collapse its abstract before saving or citing.
+- Extract readable plain text from Crossref JATS abstract metadata.
+- Fall back to OpenAlex DOI lookups and reconstruct its inverted-index abstract when Crossref has none.
+- Show the abstract source, unavailable state, and loading/error states without inventing content.
+- Keep saving and citation actions distinct from the preview; no change to project files until the user chooses to save.
+- Add unit/API-validation and browser interaction tests, plus documentation and preview screenshot.
+
 ## 2.9.0 — Project-aware AI Writing Assistant
 
 - Added a writing assistant drawer with model/provider detection (configured Hermes Agent or installed local Ollama models).
