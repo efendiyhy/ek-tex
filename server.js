@@ -160,7 +160,7 @@ function compileAttempt(job,dir,engine,main){return new Promise(resolve=>{
 async function compile(dir,engine,main,clean=false){
  const id=path.basename(dir),previous=buildJobs.get(id);
  if(previous?.running)return {ok:false,log:'Proyek sedang dikompilasi.',busy:true};
- const job={running:true,log:'',logTruncated:false,child:null,stopped:false,timedOut:false,startedAt:Date.now(),mode:clean?'clean':'normal'};
+ const job={running:true,log:'',logTruncated:false,child:null,stopped:false,timedOut:false,startedAt:Date.now(),mode:clean?'clean':'normal',file:main};
  buildJobs.set(id,job);
  try{
   if(clean){removeBuildCache(dir);appendBuildLog(job,'[Clean & Recompile] Cache build lama dihapus. File sumber tetap aman.\n\n');}
@@ -168,6 +168,14 @@ async function compile(dir,engine,main,clean=false){
    const out=path.join(dir,'.latexstudio-build');
    if(fs.existsSync(out)&&fs.lstatSync(out).isSymbolicLink())throw fail(400,'Folder cache build tidak boleh berupa symlink.');
    fs.mkdirSync(out,{recursive:true});
+   // latexmk caches are shared in this directory. Invalidate them when the
+   // selected .tex changes so two files with the same basename never reuse
+   // another file's stale PDF or .fdb_latexmk state.
+   const prior=path.join(out,'last-compiled.json');
+   if(fs.existsSync(prior)){
+    let last='';try{last=JSON.parse(fs.readFileSync(prior,'utf8')).file||''}catch{}
+    if(last&&last!==main){removeBuildCache(dir);appendBuildLog(job,'[EK TeX] Target .tex berubah. Cache build sebelumnya dibersihkan untuk menghindari PDF yang tidak sesuai.\n\n');}
+   }
   }
   let code=await compileAttempt(job,dir,engine,main);
   // When latexmk only remembers a previous failed invocation, retry once from a clean cache.
@@ -181,7 +189,8 @@ async function compile(dir,engine,main,clean=false){
   const diagnostics=latexDiagnostics(dir,main,job.log);
   const ok=code===0&&!job.stopped&&!job.timedOut&&fs.existsSync(pdf);
   const summary=job.stopped?'Kompilasi dihentikan oleh pengguna.':job.timedOut?'Kompilasi melebihi 120 detik dan dihentikan.':ok?'Kompilasi berhasil.':diagnostics.length?diagnostics[0].message:'Kompilasi gagal. Periksa log untuk mencari penyebabnya.';
-  const result={ok,exitCode:code,log:job.log,diagnostics,summary,pdfExists:fs.existsSync(pdf),timestamp:Date.now(),autoCleaned:stale,clean};
+  if(ok)fs.writeFileSync(path.join(out,'last-compiled.json'),JSON.stringify({file:main,engine,at:Date.now()},null,2));
+  const result={ok,file:main,exitCode:code,log:job.log,diagnostics,summary,pdfExists:fs.existsSync(pdf),timestamp:Date.now(),autoCleaned:stale,clean};
   job.result=result;return result;
  }catch(e){appendBuildLog(job,'\n[EK TeX] '+e.message+'\n');const result={ok:false,log:job.log,summary:e.message,diagnostics:[],pdfExists:false};job.result=result;return result;}
  finally{job.running=false;job.child=null;try{fs.writeFileSync(path.join(dir,'.latexstudio-build','build.log'),job.log)}catch{}}
@@ -361,7 +370,7 @@ function copyMedia(src,dst,depth=0,counts={n:0,size:0}){
   else if(e.isFile()){counts.n++;counts.size+=fs.statSync(here).size;if(counts.n>100||counts.size>20*1024*1024)throw fail(413,'Jumlah/ukuran media hasil konversi terlalu besar.');fs.mkdirSync(path.dirname(to),{recursive:true});fs.copyFileSync(here,to);}
  }
 }
-async function convertDocument(dir,obj){
+async function convertDocument(obj){
  if(!isAvailable('pandoc'))throw fail(422,'Pandoc belum terpasang. Jalankan setup-linux.sh atau setup-windows.ps1 untuk menginstalnya.');
  const name=String(obj.name||'').slice(0,150),ext=path.extname(name).toLowerCase(),from=CONV_INPUT[ext],to=String(obj.to||'latex');
  if(!from||!CONV_OUTPUT[to])throw fail(400,'Format konversi tidak didukung.');
@@ -379,12 +388,17 @@ async function convertDocument(dir,obj){
   const generated=path.join(tmp,output);if(!fs.existsSync(generated))throw fail(500,'File hasil konversi tidak ditemukan.');
   if(fs.statSync(generated).size>14*1024*1024)throw fail(413,'Hasil konversi terlalu besar.');
   if(to==='latex'){
-   const stem=slug(path.basename(name,ext)).slice(0,35)||'document';let folder='imports/'+stem+'-'+Date.now().toString(36),target=safePath(dir,folder+'/converted.tex');
-   fs.mkdirSync(path.dirname(target),{recursive:true});
-   // Copy all outputs first. No source file in this project is overwritten.
-   fs.copyFileSync(generated,target);
-   copyMedia(path.join(tmp,'media'),safePath(dir,folder+'/media'));
-   return {ok:true,type:'project',file:folder+'/converted.tex',note:'Hasil disimpan sebagai file baru di imports/. Gambar diekstrak ke folder media/.'};
+   // Conversion is always isolated in a NEW project, never in the open editor.
+   const title=String(obj.projectName||path.basename(name,ext)).trim().slice(0,100)||'Konversi dokumen';
+   const project=createProject(title,'blank'),dir=safeProject(project.id);
+   try{
+    const target=path.join(dir,'converted.tex');
+    fs.copyFileSync(generated,target);
+    copyMedia(path.join(tmp,'media'),path.join(dir,'media'));
+    fs.writeFileSync(path.join(dir,'.latexstudio.json'),JSON.stringify({name:title,main:'converted.tex',engine:'pdf'},null,2));
+    fs.rmSync(path.join(dir,'main.tex'),{force:true});
+    return {ok:true,type:'project',project:{id:project.id,name:title,main:'converted.tex'},file:'converted.tex',note:'Konversi dibuat sebagai proyek baru. File dan gambar proyek lain tidak diubah.'};
+   }catch(e){fs.rmSync(dir,{recursive:true,force:true});throw e;}
   }
   return {ok:true,type:'download',name:slug(path.basename(name,ext))+CONV_OUTPUT[to],data:fs.readFileSync(generated).toString('base64')};
  }finally{fs.rmSync(tmp,{recursive:true,force:true});}
@@ -407,6 +421,29 @@ async function router(req,res){
  if(p==='/api/status'&&method==='GET')return json(res,{latexmk:commandAvailable('latexmk'),pdflatex:commandAvailable('pdflatex'),perl:commandAvailable('perl'),bibtex:commandAvailable('bibtex'),xelatex:commandAvailable('xelatex'),lualatex:commandAvailable('lualatex'),pandoc:isAvailable('pandoc'),hermes:isAvailable('hermes'),node:process.version,workspace:WORKSPACE});
  if(p==='/api/projects'&&method==='GET')return json(res,listProjects());
  if(p==='/api/projects'&&method==='POST'){const d=await body(req);return json(res,createProject(d.name,d.template),201);}
+ const projectResource=p.match(/^\/api\/projects\/([a-z0-9_-]+)$/);
+ if(projectResource){
+  const dir=safeProject(projectResource[1]);
+  if(method==='PATCH'){
+   const d=await body(req),name=String(d.name||'').trim();
+   if(!name||name.length>100)throw fail(400,'Nama proyek harus berisi 1–100 karakter.');
+   const cfgFile=path.join(dir,'.latexstudio.json');
+   const cfg=JSON.parse(fs.readFileSync(cfgFile,'utf8'));
+   cfg.name=name;fs.writeFileSync(cfgFile,JSON.stringify(cfg,null,2));
+   return json(res,{id:projectResource[1],name,main:cfg.main||'main.tex'});
+  }
+  if(method==='DELETE'){
+   if(buildJobs.get(projectResource[1])?.running)throw fail(409,'Hentikan kompilasi sebelum menghapus proyek.');
+   const d=await body(req);const cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));
+   if(d.confirmName!==cfg.name)throw fail(400,'Ketik nama proyek yang sama untuk konfirmasi penghapusan.');
+   // No symlink traversal or deletion outside the validated workspace directory.
+   fs.rmSync(dir,{recursive:true,force:true});buildJobs.delete(projectResource[1]);
+   for(const [key,value] of proposals){if(value.project===projectResource[1])proposals.delete(key);}
+   return json(res,{ok:true,deleted:projectResource[1]});
+  }
+  throw fail(405,'Metode tidak didukung.');
+ }
+ if(p==='/api/convert'&&method==='POST'){const d=await body(req,19*1024*1024);return json(res,await convertDocument(d));}
  if(p==='/api/projects/import'&&method==='POST'){const d=await body(req);return json(res,importProject(d),201);}
  if(p==='/api/search'&&method==='GET'){
    const q=String(url.searchParams.get('q')||'').trim().slice(0,250);if(q.length<3)throw fail(400,'Masukkan minimal 3 karakter.');
@@ -436,13 +473,13 @@ async function router(req,res){
   if(route==='hermes/apply'&&method==='POST'){
    const d=await body(req);if(!/^[a-f0-9]{40}$/.test(d.proposalId||''))throw fail(400,'ID saran tidak valid.');return json(res,saveProposal(dir,d.proposalId));
   }
-  if(route==='convert'&&method==='POST'){const d=await body(req,19*1024*1024);return json(res,await convertDocument(dir,d));}
+  if(route==='convert'&&method==='POST'){const d=await body(req,19*1024*1024);return json(res,await convertDocument(d));}
   throw fail(405,'Metode tidak didukung.');
  }
  const control=p.match(/^\/api\/projects\/([a-z0-9_-]+)\/build\/(status|stop)$/);
  if(control){
   const dir=safeProject(control[1]),job=buildJobs.get(path.basename(dir));
-  if(control[2]==='status'&&method==='GET')return json(res,job?{running:job.running,log:job.log,startedAt:job.startedAt,summary:job.result?.summary||null,diagnostics:job.result?.diagnostics||[],stopped:job.stopped,timedOut:job.timedOut}:{running:false,log:'',summary:null,diagnostics:[]});
+  if(control[2]==='status'&&method==='GET')return json(res,job?{running:job.running,file:job.file,log:job.log,startedAt:job.startedAt,summary:job.result?.summary||null,diagnostics:job.result?.diagnostics||[],stopped:job.stopped,timedOut:job.timedOut}:{running:false,log:'',summary:null,diagnostics:[]});
   if(control[2]==='stop'&&method==='POST')return json(res,{stopping:stopBuildJob(job,'user')});
   throw fail(405,'Metode tidak didukung.');
  }
@@ -494,16 +531,24 @@ async function router(req,res){
   }
   if(route==='build'&&method==='POST'){
    const d=await body(req);let cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));
-   const main=safePath(dir,cfg.main),engine=d.engine||cfg.engine||'pdf';
-   if(!fs.existsSync(main)||path.extname(main)!=='.tex')throw fail(400,'Main .tex tidak ditemukan.');
+   const target=typeof d.file==='string'?d.file:cfg.main;
+   const main=safePath(dir,target),engine=d.engine||cfg.engine||'pdf';
+   if(!fs.existsSync(main)||!fs.statSync(main).isFile()||path.extname(main).toLowerCase()!=='.tex')throw fail(400,'File .tex yang dipilih tidak ditemukan.');
    if(!['pdf','xelatex','lualatex'].includes(engine))throw fail(400,'Engine tidak valid.');
    if(!commandAvailable('latexmk'))throw fail(422,'latexmk belum siap. Tutup server lalu jalankan install-windows.bat (Windows) atau start-linux.sh (Linux) untuk setup otomatis.');
-   return json(res,await compile(dir,engine,cfg.main,d.clean===true));
+   return json(res,await compile(dir,engine,target,d.clean===true));
   }
   if(route==='pdf'&&(method==='GET'||method==='HEAD')){
-   let cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));
-   const f=path.join(dir,'.latexstudio-build',path.basename(cfg.main,'.tex')+'.pdf');
-   if(!fs.existsSync(f))throw fail(404,'PDF belum tersedia.');
+   const cfg=JSON.parse(fs.readFileSync(path.join(dir,'.latexstudio.json'),'utf8'));
+   const file=url.searchParams.get('file')||cfg.main;
+   const tex=safePath(dir,file);
+   if(path.extname(tex).toLowerCase()!=='.tex'||!fs.existsSync(tex))throw fail(400,'Pilih file .tex yang valid.');
+   const out=path.join(dir,'.latexstudio-build'),meta=path.join(out,'last-compiled.json');
+   let compiled=cfg.main; // backwards-compatible previews of v2.5.1 projects
+   if(fs.existsSync(meta))try{compiled=JSON.parse(fs.readFileSync(meta,'utf8')).file}catch{throw fail(404,'Metadata PDF tidak tersedia. Compile ulang.');}
+   if(compiled!==file)throw fail(404,'PDF untuk file ini belum dikompilasi.');
+   const f=path.join(out,path.basename(file,'.tex')+'.pdf');
+   if(!fs.existsSync(f))throw fail(404,'PDF untuk file ini belum tersedia.');
    res.writeHead(200,{'Content-Type':'application/pdf','Content-Length':fs.statSync(f).size,'Content-Disposition':'inline; filename="preview.pdf"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(method==='HEAD')return res.end();return fs.createReadStream(f).pipe(res);
   }
   if(route==='export'&&method==='GET'){
@@ -522,5 +567,4 @@ const server=http.createServer((req,res)=>{Promise.resolve().then(()=>router(req
  if(status>=500)console.error('[ERROR]',e.message);
  json(res,{error: e.message||'Kesalahan server.'},status);
 });});
-if(!listProjects().length)createProject('Artikel Pertama','article');
 server.listen(PORT,HOST,()=>console.log(`\nLaTeXStudio Local: http://${HOST}:${PORT}\nFolder proyek: ${WORKSPACE}\nTekan Ctrl+C untuk berhenti.\n`));

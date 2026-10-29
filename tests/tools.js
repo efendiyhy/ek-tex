@@ -34,12 +34,15 @@ function request(port,method,route,data){return new Promise((ok,no)=>{const raw=
   r=await request(port,'POST',base+'/hermes/apply',{proposalId:r.data.proposalId});assert.equal(r.status,200);assert(fs.readFileSync(main,'utf8').includes('% TEST_HERMES_TOKEN'));assert(fs.readdirSync(path.join(dir,'.latexstudio-backups')).some(n=>n.includes('--ai-')));
   if(spawnSync('pandoc',['--version']).status===0){
    const md=Buffer.from('# Test conversion\n\n\u03B1 and $x^2$.\n').toString('base64');
-   r=await request(port,'POST',base+'/convert',{name:'original.md',to:'latex',data:md});assert.equal(r.status,200,JSON.stringify(r.data));assert(r.data.file.startsWith('imports/'));
-   assert(fs.readFileSync(path.join(dir,r.data.file),'utf8').includes('Test conversion'));
+   r=await request(port,'POST',base+'/convert',{name:'original.md',to:'latex',data:md});assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.type,'project');
+   assert.notEqual(r.data.project.id,id);
+   const createdDir=path.join(app,'workspace',r.data.project.id);
+   assert(fs.readFileSync(path.join(createdDir,r.data.file),'utf8').includes('Test conversion'));
+   assert(!fs.existsSync(path.join(dir,'imports')),'Source project must not be modified');
    r=await request(port,'POST',base+'/convert',{name:'original.md',to:'docx',data:md});assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(Buffer.from(r.data.data,'base64').subarray(0,2).toString(),'PK');
    // Convert resulting real docx back to LaTeX.
    r=await request(port,'POST',base+'/convert',{name:'roundtrip.docx',to:'latex',data:r.data.data});assert.equal(r.status,200,JSON.stringify(r.data));
-   assert(fs.existsSync(path.join(dir,r.data.file)));
+   assert(fs.existsSync(path.join(app,'workspace',r.data.project.id,r.data.file)));
    // Check DOCX with an embedded PNG: media must be extracted alongside TeX.
    const imageMd=path.join(temp,'with-image.md'),imagePng=path.join(temp,'figure.png'),imageDocx=path.join(temp,'with-image.docx');
    fs.copyFileSync(path.join(root,'public','favicon.png'),imagePng);
@@ -48,7 +51,7 @@ function request(port,method,route,data){return new Promise((ok,no)=>{const raw=
    assert.equal(generated.status,0,generated.stderr?.toString());
    r=await request(port,'POST',base+'/convert',{name:'with-image.docx',to:'latex',data:fs.readFileSync(imageDocx).toString('base64')});
    assert.equal(r.status,200,JSON.stringify(r.data));
-   const importDir=path.dirname(path.join(dir,r.data.file));
+   const importDir=path.dirname(path.join(app,'workspace',r.data.project.id,r.data.file));
    assert(fs.existsSync(path.join(importDir,'media')),'Pandoc extracted a media directory');
   }
   console.log('[PASS] Offline diagnoses missing packages, Hermes propose/review/apply with stale protection, Pandoc markdown/docx/latex conversion');

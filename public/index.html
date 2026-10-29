@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d1423"><meta name="description" content="LaTeXStudio Local, editor LaTeX pribadi yang dikembangkan oleh EK Instrumentation."><title>LaTeXStudio Local | EK Instrumentation</title>
+<meta name="theme-color" content="#0d1423"><meta name="description" content="EK TeX, editor LaTeX lokal yang dikembangkan oleh EK Instrumentation."><title>EK TeX — LaTeX Workspace | EK Instrumentation</title>
 <link rel="icon" type="image/svg+xml" href="/cat-logo.svg">
 <link rel="alternate icon" type="image/png" href="/favicon.png">
 <link rel="stylesheet" href="/styles.css">
@@ -10,7 +10,7 @@
 <body>
 <div id="app">
 <header class="topbar">
- <div class="brand" aria-label="LaTeXStudio Local, developed by EK Instrumentation"><div class="brandmark"><img src="/cat-logo.svg" alt="Logo kucing EK Instrumentation" width="40" height="40"></div><div class="brandname">LaTeX<span>Studio</span><small>BY EK INSTRUMENTATION</small></div></div>
+ <div class="brand" aria-label="EK TeX, developed by EK Instrumentation"><div class="brandmark"><img src="/cat-logo.svg" alt="Logo kucing EK Instrumentation" width="40" height="40"></div><div class="brandname">EK <span>TeX</span><small>BY EK INSTRUMENTATION</small></div></div>
  <button class="iconbtn editor-only" id="toggle-sidebar" title="Minimalkan / tampilkan sidebar (Ctrl+B)">☰</button>
  <div class="top-sep editor-only"></div>
  <button class="project-btn editor-only" id="project-picker" title="Kembali ke daftar proyek"><span class="project-symbol">⌁</span><span class="project-name" id="project-name">Memuat...</span><span class="chevron">⌄</span></button>
@@ -22,11 +22,11 @@
 </header>
 <section class="dashboard" id="dashboard" aria-label="Daftar proyek LaTeX">
   <div class="dash-shell">
-    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.5</div>
-    <div class="dash-heading"><div><h1>Ruang kerja Anda<span class="dash-period">.</span></h1><p>Pilih proyek untuk mulai menulis, atau buat dokumen LaTeX baru.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Dikembangkan oleh <strong>EK Instrumentation</strong></span></div></div><button class="dash-primary" id="dashboard-new">＋ &nbsp; Proyek baru</button></div>
-    <div class="dash-overview"><div class="dash-stat"><span>PROJECTS</span><strong id="dash-count">0</strong><small>Proyek tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Memeriksa lingkungan</small></div><div class="dash-stat dash-stat-side"><span>QUICK ACCESS</span><button id="dashboard-import" class="dash-quick">⇧ &nbsp; Import proyek ZIP <span>↗</span></button><small>Impor dari Overleaf atau file ZIP lain</small></div></div>
+    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.6</div>
+    <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
+    <div class="dash-overview"><div class="dash-stat"><span>PROYEK</span><strong id="dash-count">0</strong><small>tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Pemeriksaan awal</small></div><div class="dash-stat dash-stat-side"><span>IMPOR</span><button id="dashboard-import" class="dash-quick">⇧ Proyek ZIP <span>↗</span></button><small>Overleaf atau ZIP lokal</small></div></div>
     <div class="dash-library-head"><div><h2>Proyek saya</h2><span id="dash-subtitle">Semua proyek</span></div><label class="dash-search">⌕ <input id="dashboard-search" type="search" placeholder="Cari nama proyek..." aria-label="Cari proyek"></label></div>
-    <div id="dashboard-projects" class="dash-grid"></div>
+    <div class="dash-list-head" aria-hidden="true"><span>PROYEK</span><span>FILE UTAMA</span><span>TERAKHIR DIUBAH</span><span>AKSI</span></div><div id="dashboard-projects" class="dash-list"></div>
     <div class="dash-foot"><span>⌁ &nbsp; Semua proyek tersimpan di folder <code>workspace/</code> pada komputer Anda.</span><span class="developer-foot"><img src="/cat-logo.svg" width="20" height="20" alt=""> Developed by <strong>EK Instrumentation</strong></span></div>
   </div>
 </section>
@@ -64,7 +64,7 @@
   </section>
   <section class="sidepane hidden" id="side-tools">
    <div class="side-title"><span>DEBUG & CONVERT</span></div>
-   <div class="side-padding tool-stack"><p class="muted">Analisis masalah compile dan tampilkan langkah perbaikan.</p>
+   <div class="side-padding tool-stack"><p class="muted">Analisis error file yang sedang dikompilasi.</p>
     <button class="btn btn-wide outline" id="run-debugger">⚑ Analisis error LaTeX</button>
     <div id="debug-report" class="debug-report"><span class="muted">Compile dahulu, lalu analisis log.</span></div>
     <div class="or-divider">HERMES AGENT</div>
@@ -73,7 +73,7 @@
     <p class="muted">Perubahan AI ditampilkan untuk ditinjau, tidak diterapkan tanpa persetujuan.</p>
     <div class="or-divider">DOCUMENT CONVERTER</div>
     <div id="pandoc-status" class="muted">Memeriksa Pandoc...</div>
-    <button class="btn btn-wide outline" id="convert-open">⇄ Konversi DOCX / LaTeX / Markdown</button>
+    <button class="btn btn-wide outline" id="convert-open">⇄ Konversi ke proyek baru</button>
    </div>
   </section>
  </aside>
@@ -87,7 +87,7 @@
  </main>
  <section class="preview" id="preview-panel">
   <div class="preview-header"><div class="preview-heading"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zm10 0v5h5M8 13h8M8 17h6"/></svg><span>PDF PREVIEW</span></div><span class="preview-version" id="preview-version">Belum dikompilasi</span></div>
-  <div class="pdf-toolbar"><button class="btn compile-btn" id="compile"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><span id="compile-label">Compile</span></button><button class="btn clean-btn" id="clean-compile" title="Hapus cache hasil kompilasi lama lalu compile ulang. File .tex dan .bib tidak dihapus.">↻ Clean & Recompile</button><button class="btn stop-btn hidden" id="stop-compile" title="Hentikan proses kompilasi">■ Stop</button><select id="engine" title="Compiler"><option value="pdf">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><div class="grow"></div><button class="iconbtn" id="refresh-pdf" title="Muat ulang PDF">↻</button><button class="iconbtn" id="download-pdf" title="Buka / unduh PDF">⇩</button></div>
+  <div class="pdf-toolbar"><span class="compile-current" id="compile-target" title="File yang akan dikompilasi">Pilih file .tex</span><button class="btn compile-btn" id="compile"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><span id="compile-label">Compile</span></button><button class="btn clean-btn" id="clean-compile" title="Hapus cache hasil kompilasi lama lalu compile ulang. File .tex dan .bib tidak dihapus.">↻ Clean & Recompile</button><button class="btn stop-btn hidden" id="stop-compile" title="Hentikan proses kompilasi">■ Stop</button><select id="engine" title="Compiler"><option value="pdf">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><div class="grow"></div><button class="iconbtn" id="refresh-pdf" title="Muat ulang PDF">↻</button><button class="iconbtn" id="download-pdf" title="Buka / unduh PDF">⇩</button></div>
   <div class="pdf-host" id="pdf-host"><div class="pdf-empty" id="pdf-empty"><div class="paper-illustration"><div class="paper-line thick"></div><div class="paper-line"></div><div class="paper-line short"></div><div class="paper-rule"></div><div class="paper-equation">∫ f(x) dx</div><div class="paper-line"></div><div class="paper-line short"></div></div><h3>Preview dokumen Anda</h3><p>Klik <strong>Compile</strong> untuk membuat dan melihat hasil PDF di sini.</p><div class="kbd">Ctrl + Enter</div></div><iframe id="pdf-frame" class="hidden" title="Hasil kompilasi PDF"></iframe></div>
   <div class="preview-footer"><span><i class="footer-dot"></i> Local rendering</span><button id="preview-help">Panduan PDF ↗</button></div>
  </section>

@@ -35,13 +35,21 @@ const sleep = ms=>new Promise(r=>setTimeout(r,ms));
   let live=false;for(let i=0;i<70;i++){if(child.exitCode!==null)throw new Error('Server exited prematurely: '+output);try{let r=await request(port,'GET','/api/projects');if(r.status===200){live=true;break;}}catch{}await sleep(70);}
   assert(live, 'HTTP server did not start');
   let r=await request(port,'GET','/');assert.equal(r.status,200);assert.match(r.body.toString(),/id="dashboard"/);
-  r=await request(port,'GET','/api/projects');assert.equal(r.status,200);assert(r.body.length>=1);
+  r=await request(port,'GET','/api/projects');assert.equal(r.status,200);assert(Array.isArray(r.body));
   r=await request(port,'POST','/api/projects',{name:'CI Test Project',template:'article'});
   assert.equal(r.status,201);const id=r.body.id;assert.match(id,/^[a-z0-9-]+$/);
   r=await request(port,'GET',`/api/projects/${id}/tree`);assert.equal(r.status,200);assert(r.body.some(f=>f.name==='main.tex'));
   r=await request(port,'PUT',`/api/projects/${id}/file`,{path:'main.tex',content:'\\documentclass{article}\n\\begin{document}CI test\\end{document}\n'});assert.equal(r.status,200);
   r=await request(port,'GET',`/api/projects/${id}/file?path=main.tex`);assert.equal(r.status,200);assert.match(r.body.content,/CI test/);
   r=await request(port,'GET',`/api/projects/${id}/export`);assert.equal(r.status,200);assert.equal(r.body.subarray(0,2).toString('ascii'),'PK');
-  console.log('[PASS] Dashboard, project API, file edit, and ZIP export');
+  // Metadata rename does not rename the folder or corrupt project files.
+  r=await request(port,'PATCH',`/api/projects/${id}`,{name:'Renamed Research Project'});
+  assert.equal(r.status,200);assert.equal(r.body.name,'Renamed Research Project');
+  r=await request(port,'GET',`/api/projects/${id}/file?path=main.tex`);assert.equal(r.status,200);
+  // Delete requires exact name; no accidental deletion.
+  r=await request(port,'DELETE',`/api/projects/${id}`,{confirmName:'wrong'});assert.equal(r.status,400);
+  r=await request(port,'DELETE',`/api/projects/${id}`,{confirmName:'Renamed Research Project'});assert.equal(r.status,200);
+  r=await request(port,'GET',`/api/projects/${id}/tree`);assert.equal(r.status,404);
+  console.log('[PASS] Dashboard (including empty state), rename/delete confirmation, project API, file edit, ZIP export');
  } finally {child.kill('SIGTERM');await sleep(100);fs.rmSync(temp,{recursive:true,force:true});}
 })().catch(err=>{console.error('[FAIL]',err);process.exitCode=1;fs.rmSync(temp,{recursive:true,force:true});});

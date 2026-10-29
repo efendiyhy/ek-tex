@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 const localPref={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const state={project:null,config:null,projects:[],tabs:[],active:null,docs:new Map(),saveTimers:new Map(),build:false,log:'',preview:false,selectedTemplate:'article',side:'files',sidebarCollapsed:localPref.get('latexstudio-sidebar-collapsed')==='1',view:'dashboard'};
+const state={project:null,config:null,projects:[],tabs:[],active:null,docs:new Map(),saveTimers:new Map(),build:false,log:'',preview:false,previewFile:null,selectedTemplate:'article',side:'files',sidebarCollapsed:localPref.get('latexstudio-sidebar-collapsed')==='1',view:'dashboard'};
 let toastTimer;
 const snippets=[
  {title:'Section',short:'\\section{...}',code:'\\section{Judul Bagian}\n'},
@@ -52,15 +52,32 @@ function renderDashboard(){
  const list=state.projects.filter(p=>p.name.toLowerCase().includes(q)||p.id.includes(q));
  $('dash-count').textContent=state.projects.length;
  $('dash-subtitle').textContent=q?`${list.length} hasil ditemukan`:`${state.projects.length} proyek tersedia`;
- if(!list.length){host.innerHTML=`<div class="dash-no-results">${state.projects.length?'Tidak ada proyek yang cocok.':'Belum ada proyek. Klik Proyek baru untuk memulai.'}</div>`;return}
- const symbols=['∑','∫','λ','π','α','β'];
- host.innerHTML='';list.forEach((p,i)=>{
-  const card=document.createElement('button');card.className='dash-project';card.type='button';
-  card.innerHTML=`<div class="dash-card-top"><span class="dash-project-icon">${symbols[i%symbols.length]}</span><span class="dash-open-arrow">↗</span></div><div class="dash-project-name">${esc(p.name)}</div><div class="dash-project-main">⌁ &nbsp; ${esc(p.main||'main.tex')}</div><div class="dash-project-bottom"><span>◷ &nbsp; ${fmtDate(p.updated)}</span><span>Buka proyek →</span></div>`;
-  card.onclick=()=>chooseProject(p.id).catch(e=>toast(e.message,true));host.append(card);
- });
- const add=document.createElement('button');add.className='dash-add-card';add.type='button';add.innerHTML='<span class="dash-add-icon">＋</span><strong>Buat proyek baru</strong><small>Article · Thesis · Beamer</small>';
- add.onclick=newProjectDialog;host.append(add);
+ host.replaceChildren();
+ if(!list.length){const empty=document.createElement('div');empty.className='dash-no-results';empty.textContent=state.projects.length?'Tidak ada proyek yang cocok.':'Belum ada proyek. Buat proyek LaTeX atau konversi dokumen untuk memulai.';host.append(empty);return;}
+ for(const p of list){
+  const row=document.createElement('div');row.className='dash-project-row';
+  const open=document.createElement('button');open.className='dash-project-open';open.type='button';open.title='Buka '+p.name;
+  const icon=document.createElement('span');icon.className='dash-row-icon';icon.textContent='TₑX';
+  const nameWrap=document.createElement('span');nameWrap.className='dash-row-name';
+  const name=document.createElement('strong');name.textContent=p.name;const subtitle=document.createElement('small');subtitle.textContent='Buka proyek →';nameWrap.append(name,subtitle);
+  const main=document.createElement('span');main.className='dash-row-main';main.textContent=p.main||'main.tex';
+  const date=document.createElement('span');date.className='dash-row-date';date.textContent=fmtDate(p.updated);
+  open.append(icon,nameWrap,main,date);open.onclick=()=>chooseProject(p.id).catch(e=>toast(e.message,true));
+  const actions=document.createElement('div');actions.className='dash-row-actions';
+  const rename=document.createElement('button');rename.className='dash-action';rename.title='Rename proyek';rename.textContent='Rename';rename.onclick=()=>renameProjectDialog(p);
+  const remove=document.createElement('button');remove.className='dash-action danger';remove.title='Delete proyek';remove.textContent='Delete';remove.onclick=()=>deleteProjectDialog(p);
+  actions.append(rename,remove);row.append(open,actions);host.append(row);
+ }
+}
+function renameProjectDialog(p){
+ modal('Rename proyek',`<label>Nama proyek baru</label><input id="rename-project-name" maxlength="100" value="${esc(p.name)}"><p class="muted">Nama proyek pada dashboard berubah; folder dan ID proyek tetap sama agar tautan serta file tidak terganggu.</p>`,modalButtons('Simpan nama'),'PROJECT MANAGEMENT');
+ $('modal-apply').onclick=async()=>{try{const name=$('rename-project-name').value.trim();if(!name)return toast('Nama proyek tidak boleh kosong.',true);await api(`/api/projects/${p.id}`,'PATCH',{name});await loadProjects();closeModal();toast('Nama proyek diperbarui.')}catch(e){toast(e.message,true)}};
+}
+function deleteProjectDialog(p){
+ modal('Hapus proyek',`<p class="delete-warning">Seluruh file dan folder proyek ini akan dihapus permanen, termasuk file .tex, .bib, gambar, dan hasil build. Simpan ZIP cadangan dahulu jika diperlukan.</p><p>Untuk mengonfirmasi, ketik nama proyek <strong>${esc(p.name)}</strong>:</p><input id="confirm-project-name" autocomplete="off" placeholder="Ketik nama proyek persis"><p class="muted">Tindakan ini tidak dapat dibatalkan.</p>`,`<button class="btn" data-cancel>Batal</button><button class="btn danger" id="confirm-delete" disabled>Hapus permanen</button>`,'DELETE PROJECT');
+ const input=$('confirm-project-name'),button=$('confirm-delete');input.oninput=()=>{button.disabled=input.value!==p.name};
+ button.onclick=async()=>{if(input.value!==p.name)return;try{button.disabled=true;await api(`/api/projects/${p.id}`,'DELETE',{confirmName:p.name});await loadProjects();closeModal();toast('Proyek berhasil dihapus.')}catch(e){button.disabled=false;toast(e.message,true)}};
+ input.focus();
 }
 function showDashboard(){
  state.view='dashboard';document.body.classList.add('mode-dashboard');document.body.classList.remove('mode-editor');
@@ -86,16 +103,17 @@ function toggleSidebar(force){
 $('toggle-sidebar').onclick=()=>toggleSidebar();
 $('dashboard-new').onclick=newProjectDialog;
 $('dashboard-import').onclick=()=>$('zip-input').click();
+$('dashboard-convert').onclick=()=>openConverter();
 $('dashboard-search').oninput=renderDashboard;
-async function chooseProject(id){await saveAll();const project=state.projects.find(x=>x.id===id);if(!project)throw new Error('Proyek tidak ditemukan.');state.project=project;state.config=await api(`/api/projects/${id}/config`);state.docs.clear();state.tabs=[];state.active=null;state.preview=false;$('pdf-frame').classList.add('hidden');$('pdf-empty').classList.remove('hidden');$('preview-version').textContent='Belum dikompilasi';$('project-name').textContent=state.config.name||project.name;$('sidebar-project').textContent=state.config.name||project.name;$('engine').value=state.config.engine||'pdf';showEditor();await reloadTree();await openFile(state.config.main||'main.tex');try{const r=await fetch(`/api/projects/${id}/pdf`,{method:'HEAD'});if(r.ok)refreshPdf()}catch{}}
+async function chooseProject(id){await saveAll();const project=state.projects.find(x=>x.id===id);if(!project)throw new Error('Proyek tidak ditemukan.');state.project=project;state.config=await api(`/api/projects/${id}/config`);state.docs.clear();state.tabs=[];state.active=null;state.preview=false;state.previewFile=null;$('pdf-frame').classList.add('hidden');$('pdf-empty').classList.remove('hidden');$('preview-version').textContent='Belum dikompilasi';$('project-name').textContent=state.config.name||project.name;$('sidebar-project').textContent=state.config.name||project.name;$('engine').value=state.config.engine||'pdf';showEditor();await reloadTree();await openFile(state.config.main||'main.tex');}
 function syncSaveIndicator(){const dirty=[...state.docs.values()].some(x=>x.dirty);$('dirty-indicator').textContent=dirty?'● Unsaved':'● Saved';$('dirty-indicator').classList.toggle('dirty',dirty);renderTabs();}
 async function openFile(p){if(!state.project)return;
  if(state.active===p)return;
  if(state.active){const old=state.docs.get(state.active);if(old){old.scroll=$('code-editor').scrollTop;old.cursor=$('code-editor').selectionStart;}}
  if(!state.docs.has(p)){const file=await api(`/api/projects/${state.project.id}/file?path=${pathUrl(p)}`);state.docs.set(p,{content:file.content,dirty:false,scroll:0,cursor:0});}
  if(!state.tabs.includes(p))state.tabs.push(p);state.active=p;
- const doc=state.docs.get(p);$('code-editor').value=doc.content;renderCode();$('code-editor').scrollTop=doc.scroll||0;$('code-editor').selectionStart=$('code-editor').selectionEnd=doc.cursor||0;updateCursor();renderTabs();await reloadTree();statusText();}
-async function closeTab(p){if(state.docs.get(p)?.dirty)await savePath(p);state.tabs=state.tabs.filter(t=>t!==p);state.docs.delete(p);if(state.active===p){state.active=null;if(state.tabs.length)await openFile(state.tabs[state.tabs.length-1]);else {$('code-editor').value='';renderCode();}}renderTabs();await reloadTree();}
+ const doc=state.docs.get(p);$('code-editor').value=doc.content;renderCode();$('code-editor').scrollTop=doc.scroll||0;$('code-editor').selectionStart=$('code-editor').selectionEnd=doc.cursor||0;updateCursor();renderTabs();await reloadTree();statusText();syncCompileTarget();await updatePreviewForActive();}
+async function closeTab(p){if(state.docs.get(p)?.dirty)await savePath(p);state.tabs=state.tabs.filter(t=>t!==p);state.docs.delete(p);if(state.active===p){state.active=null;if(state.tabs.length)await openFile(state.tabs[state.tabs.length-1]);else {$('code-editor').value='';renderCode();}}renderTabs();await reloadTree();syncCompileTarget();await updatePreviewForActive();}
 async function savePath(p){const doc=state.docs.get(p);if(!doc||!doc.dirty)return;clearTimeout(state.saveTimers.get(p));const snapshot=doc.content;statusText('Saving...');try{await api(`/api/projects/${state.project.id}/file`,'PUT',{path:p,content:snapshot});if(doc.content===snapshot)doc.dirty=false;syncSaveIndicator();statusText('Saved');}catch(e){statusText('Save error');toast('Gagal menyimpan '+p+': '+e.message,true);throw e}}
 async function saveAll(){const dirty=[...state.docs.keys()].filter(p=>state.docs.get(p).dirty);for(const p of dirty)await savePath(p);}
 function scheduleSave(p){clearTimeout(state.saveTimers.get(p));state.saveTimers.set(p,setTimeout(()=>savePath(p).catch(()=>{}),750));}
@@ -123,9 +141,31 @@ function findNext(){const query=$('find-input').value,t=$('code-editor');if(!que
 $('find-code').onclick=openFind;$('find-next').onclick=findNext;$('find-input').onkeydown=e=>{if(e.key==='Enter')findNext()};$('find-close').onclick=()=>$('findbar').classList.add('hidden');
 function toggleConsole(force){const show=force===undefined?$('console').classList.contains('hidden'):force;$('console').classList.toggle('hidden',!show)}
 $('toggle-console').onclick=()=>toggleConsole();$('close-console').onclick=()=>toggleConsole(false);$('copy-log').onclick=()=>{navigator.clipboard?.writeText(state.log).then(()=>toast('Log tersalin.')).catch(()=>toast('Clipboard tidak tersedia.',true))};
-function refreshPdf(){if(!state.project)return;$('pdf-frame').src=`/api/projects/${state.project.id}/pdf?t=${Date.now()}#toolbar=1&navpanes=0`;$('pdf-frame').classList.remove('hidden');$('pdf-empty').classList.add('hidden');state.preview=true;$('preview-version').textContent='PDF terbaru';}
-$('refresh-pdf').onclick=()=>{if(state.preview)refreshPdf();else toast('Compile dokumen terlebih dahulu.')};
-$('download-pdf').onclick=()=>{if(!state.preview)return toast('Belum ada PDF untuk dibuka.',true);const a=document.createElement('a');a.href=`/api/projects/${state.project.id}/pdf`;a.download='output.pdf';a.click()};
+function activeTex(){return state.active?.toLowerCase().endsWith('.tex')?state.active:null;}
+function syncCompileTarget(){
+ const file=activeTex();$('compile-target').textContent=file?'Target: '+file:'Pilih tab .tex';
+ $('compile').disabled=state.build||!file;$('clean-compile').disabled=state.build||!file;
+}
+function hidePreview(){
+ $('pdf-frame').classList.add('hidden');$('pdf-frame').removeAttribute('src');$('pdf-empty').classList.remove('hidden');
+ state.preview=false;state.previewFile=null;$('preview-version').textContent='Belum dikompilasi';
+}
+function refreshPdf(file=activeTex()){
+ if(!state.project||!file)return;
+ $('pdf-frame').src=`/api/projects/${state.project.id}/pdf?file=${encodeURIComponent(file)}&t=${Date.now()}#toolbar=1&navpanes=0`;
+ $('pdf-frame').classList.remove('hidden');$('pdf-empty').classList.add('hidden');
+ state.preview=true;state.previewFile=file;$('preview-version').textContent='PDF: '+file;
+}
+async function updatePreviewForActive(){
+ const file=activeTex(),project=state.project;if(!project||!file){hidePreview();return;}
+ const selected=file;
+ try{const r=await fetch(`/api/projects/${project.id}/pdf?file=${encodeURIComponent(selected)}`,{method:'HEAD'});
+  if(!state.project||state.project.id!==project.id||activeTex()!==selected)return;
+  if(r.ok)refreshPdf(selected);else hidePreview();
+ }catch{if(state.project?.id===project.id&&activeTex()===selected)hidePreview()}
+}
+$('refresh-pdf').onclick=()=>{if(state.preview&&state.previewFile===activeTex())refreshPdf();else toast('Compile file .tex yang aktif terlebih dahulu.')};
+$('download-pdf').onclick=()=>{if(!state.preview||state.previewFile!==activeTex())return toast('Belum ada PDF untuk file ini.',true);const a=document.createElement('a');a.href=`/api/projects/${state.project.id}/pdf?file=${encodeURIComponent(state.previewFile)}`;a.download=state.previewFile.split('/').pop().replace(/\.tex$/i,'.pdf');a.click()};
 function renderBuildSummary(result){
  const node=$('build-summary');node.innerHTML='';
  const diagnostics=result.diagnostics||[];
@@ -146,6 +186,7 @@ function renderBuildSummary(result){
 }
 async function buildPdf(clean=false){
  if(state.build||!state.project)return;
+ const source=activeTex();if(!source)return toast('Pilih tab file .tex sebelum Compile.',true);
  state.build=true;
  const projectId=state.project.id,btn=$('compile'),cleanBtn=$('clean-compile'),stopBtn=$('stop-compile');
  btn.disabled=true;cleanBtn.disabled=true;stopBtn.classList.remove('hidden');stopBtn.disabled=false;
@@ -159,14 +200,14 @@ async function buildPdf(clean=false){
    if(progress.log!==undefined&&progress.log!==state.log){state.log=progress.log;$('log-text').textContent=state.log||'Memulai kompilasi...';}
   }catch{}};
   // Start HTTP request without awaiting so status polling can display the compiler output live.
-  const pending=api(`/api/projects/${projectId}/build`,'POST',{engine:$('engine').value,clean});
+  const pending=api(`/api/projects/${projectId}/build`,'POST',{engine:$('engine').value,clean,file:source});
   interval=setInterval(update,900);await update();
   const result=await pending;
   state.log=result.log||'';$('log-text').textContent=state.log||'(Tidak ada output)';renderBuildSummary(result);
-  if(result.ok){refreshPdf();$('preview-version').textContent='Built '+new Date().toLocaleTimeString('id-ID');toast(clean?'Clean & Recompile berhasil.':'Kompilasi berhasil. PDF diperbarui.');statusText('Build success');}
+  if(result.ok){if(state.project?.id===projectId&&activeTex()===source){refreshPdf(source);$('preview-version').textContent='Built '+source+' · '+new Date().toLocaleTimeString('id-ID');}toast(clean?'Clean & Recompile berhasil.':'Kompilasi berhasil. PDF diperbarui.');statusText('Build success');}
   else {toggleConsole(true);$('preview-version').textContent=result.pdfExists?'Build failed (PDF lama)':'Compilation failed';toast(result.summary||'Kompilasi gagal — periksa error.',true);statusText('Build error');}
  }catch(e){state.log=e.message;$('log-text').textContent=e.message;renderBuildSummary({summary:e.message});toggleConsole(true);toast(e.message,true);$('preview-version').textContent='Compiler error';}
- finally{clearInterval(interval);state.build=false;btn.disabled=false;cleanBtn.disabled=false;stopBtn.classList.add('hidden');$('compile-label').textContent='Compile';}
+ finally{clearInterval(interval);state.build=false;btn.disabled=false;cleanBtn.disabled=false;stopBtn.classList.add('hidden');$('compile-label').textContent='Compile';syncCompileTarget();}
 }
 $('compile').onclick=()=>buildPdf(false);
 $('clean-compile').onclick=()=>buildPdf(true);
@@ -291,22 +332,22 @@ $('hermes-diagnose').onclick=async()=>{
  }catch(e){toast('Hermes: '+e.message,true);modal('Hermes tidak dapat digunakan',`<p>${esc(e.message)}</p><p>Jika Hermes terpasang, pastikan <code>hermes --version</code> berfungsi dan model sudah dikonfigurasi.</p>`,`<button class="btn primary" data-cancel>Tutup</button>`,'HERMES');}
  finally{$('hermes-diagnose').disabled=false;$('hermes-diagnose').textContent='✦ Minta saran perbaikan AI';}
 };
-$('convert-open').onclick=()=>{
- if(!state.project)return;
- modal('Konversi dokumen',`<p>Impor DOCX, ODT, Markdown, HTML, atau LaTeX. Pandoc mempertahankan struktur dokumen sejauh format mendukungnya.</p><label>File sumber</label><input id="converter-file-name" readonly placeholder="Klik Pilih file di bawah"><button class="btn outline" id="converter-pick">Pilih file...</button><label>Format tujuan</label><select id="converter-target" class="converter-select"><option value="latex">LaTeX (.tex), simpan di proyek</option><option value="docx">Word (.docx), unduh</option><option value="markdown">Markdown (.md), unduh</option><option value="html">HTML (.html), unduh</option></select><p class="muted">Hasil .tex dibuat sebagai file baru pada folder imports/. Format lain diunduh. Periksa persamaan, tabel, gambar, dan sitasi setelah konversi.</p>`,modalButtons('Mulai konversi'),'PANDOC');
- $('converter-pick').onclick=()=>$('convert-input').click();
- $('convert-input').onchange=e=>{$('converter-file-name').value=e.target.files?.[0]?.name||'';};
+function openConverter(){
+ modal('Konversi dokumen',`<p>DOCX, ODT, Markdown, HTML, atau LaTeX dapat dikonversi menggunakan Pandoc. <strong>Hasil LaTeX selalu menjadi proyek baru</strong> dan tidak ditambahkan ke proyek yang sedang dibuka.</p><label>File sumber</label><input id="converter-file-name" readonly placeholder="Pilih file sumber"><button class="btn outline" id="converter-pick">Pilih file...</button><label>Format tujuan</label><select id="converter-target" class="converter-select"><option value="latex">LaTeX (.tex) — buat proyek baru</option><option value="docx">Word (.docx) — unduh</option><option value="markdown">Markdown (.md) — unduh</option><option value="html">HTML (.html) — unduh</option></select><label>Nama proyek hasil konversi (khusus LaTeX)</label><input id="converter-project-name" maxlength="100" placeholder="Nama proyek baru"><p class="muted">Gambar dari DOCX diekstrak ke folder media proyek baru. Konversi format lain menghasilkan unduhan. Periksa persamaan, tabel, dan sitasi setelah konversi.</p>`,modalButtons('Mulai konversi'),'DOCUMENT CONVERTER');
+ $('convert-input').value='';$('converter-pick').onclick=()=>$('convert-input').click();
+ $('converter-target').onchange=()=>{$('converter-project-name').disabled=$('converter-target').value!=='latex'};
+ $('convert-input').onchange=e=>{const file=e.target.files?.[0];$('converter-file-name').value=file?.name||'';if(file)$('converter-project-name').value=file.name.replace(/\.[^.]+$/,'').slice(0,100);};
  $('modal-apply').onclick=async()=>{
   const file=$('convert-input').files?.[0],to=$('converter-target').value;
   if(!file)return toast('Pilih file terlebih dahulu.',true);
   if(file.size>12*1024*1024)return toast('File melebihi 12 MB.',true);
   const btn=$('modal-apply');btn.disabled=true;btn.textContent='Converting...';
   try{
-   await saveAll();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file)});
-   const result=await api(`/api/projects/${state.project.id}/convert`,'POST',{name:file.name,data,to});
-   if(result.type==='project'){await reloadTree();await openFile(result.file);toast('Hasil konversi disimpan: '+result.file)}
-   else{const bytes=atob(result.data),array=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)array[i]=bytes.charCodeAt(i);const url=URL.createObjectURL(new Blob([array]));const a=document.createElement('a');a.href=url;a.download=result.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('Konversi selesai: '+result.name)}
-   closeModal();$('convert-input').value='';
-  }catch(e){toast(e.message,true)}finally{btn.disabled=false;btn.textContent='Mulai konversi'}
+   const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file)});
+   const result=await api('/api/convert','POST',{name:file.name,data,to,projectName:$('converter-project-name').value.trim()});
+   if(result.type==='project'){if(state.project)await saveAll();await loadProjects();closeModal();await chooseProject(result.project.id);toast('Proyek konversi baru dibuat: '+result.project.name);}
+   else{const bytes=atob(result.data),array=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)array[i]=bytes.charCodeAt(i);const url=URL.createObjectURL(new Blob([array]));const a=document.createElement('a');a.href=url;a.download=result.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);closeModal();toast('Konversi selesai: '+result.name);}
+  }catch(e){toast(e.message,true)}finally{btn.disabled=false;btn.textContent='Mulai konversi';$('convert-input').value='';}
  };
-};
+}
+$('convert-open').onclick=openConverter;
