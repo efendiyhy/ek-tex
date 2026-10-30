@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.1.0 — Softer editor and PDF layout options (30 October 2026)
+
+- Memperhalus tampilan editor dengan radius panel, toolbar, popup, dan kartu yang lebih konsisten.
+- Membuat scrollbar aplikasi mengikuti Light/Dark mode pada setiap tema, termasuk source editor, sidebar, dialog, dan output log.
+- Menambahkan kontrol berikon **Split / Tab baru** pada toolbar atas. Preferensi tampilan PDF tersimpan di browser.
+- Membuka PDF di tab terpisah ketika tersedia; dalam mode Tab baru, Compile menyiapkan tab sebelum proses asinkron agar tidak terhalang popup blocker.
+- Menyediakan Compile, Clean & Recompile, dan Stop pada toolbar editor saat panel pratinjau samping disembunyikan.
+- Menghapus kartu GETTING STARTED dan tautan setup compiler dari sidebar editor. Panduan tetap ada di README.
+- Memperbarui gambar dokumentasi dan menambahkan pengujian fitur PDF baru.
+
+**Compatibility:** Tidak ada perubahan format proyek, struktur workspace, atau API. Fitur sebelumnya tetap tersedia.
+
+---
+
 ## 3.0.0 — Editor redesign and project switcher (30 October 2026)
 
 - Mengubah tombol `+` editor dari pembuatan proyek langsung menjadi menu **Open saved project / New project / Import ZIP**.

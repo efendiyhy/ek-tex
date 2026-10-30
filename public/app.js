@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const localPref={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}}};
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const features=window.EKTeXFeatures;
-const state={project:null,config:null,projects:[],tabs:[],active:null,docs:new Map(),saveTimers:new Map(),build:false,log:'',preview:false,previewFile:null,selectedTemplate:'article',side:'files',sidebarCollapsed:localPref.get('latexstudio-sidebar-collapsed')==='1',view:'dashboard',diagnostics:[],suggestIndex:0,suggestCtx:null,theme:features.validTheme(localPref.get('ektex-theme')),mode:features.validMode(localPref.get('ektex-mode'))};
+const state={project:null,config:null,projects:[],tabs:[],active:null,docs:new Map(),saveTimers:new Map(),build:false,log:'',preview:false,previewFile:null,selectedTemplate:'article',side:'files',sidebarCollapsed:localPref.get('latexstudio-sidebar-collapsed')==='1',view:'dashboard',diagnostics:[],suggestIndex:0,suggestCtx:null,theme:features.validTheme(localPref.get('ektex-theme')),mode:features.validMode(localPref.get('ektex-mode')),pdfView:localPref.get('ektex-pdf-view')==='tab'?'tab':'split'};
 let toastTimer;
 function applyAppearance(theme=state.theme,mode=state.mode){
  state.theme=features.validTheme(theme);state.mode=features.validMode(mode);
@@ -238,9 +238,36 @@ $('code-editor').addEventListener('input',()=>{if(!$('findbar').classList.contai
 function toggleConsole(force){const show=force===undefined?$('console').classList.contains('hidden'):force;$('console').classList.toggle('hidden',!show)}
 $('toggle-console').onclick=()=>toggleConsole();$('close-console').onclick=()=>toggleConsole(false);$('copy-log').onclick=()=>{navigator.clipboard?.writeText(state.log).then(()=>toast('Log tersalin.')).catch(()=>toast('Clipboard tidak tersedia.',true))};
 function activeTex(){return state.active?.toLowerCase().endsWith('.tex')?state.active:null;}
+// PDF view preferences are a presentation choice, independent of compiler target.
+function pdfUrl(file,projectId=state.project?.id){return `/api/projects/${projectId}/pdf?file=${encodeURIComponent(file)}&t=${Date.now()}#toolbar=1&navpanes=0`;}
+function pdfWindowName(projectId){return 'ektex_pdf_'+String(projectId).replace(/[^a-zA-Z0-9_-]/g,'_');}
+function openPdfTab(file=activeTex(), projectId=state.project?.id){
+ if(!file||!projectId){toast('Pilih file .tex untuk membuka PDF.',true);return null;}
+ if(!state.preview||state.previewFile!==file||state.project?.id!==projectId){toast('Belum ada PDF untuk file ini. Klik Compile terlebih dahulu.',true);return null;}
+ const opened=window.open(new URL(pdfUrl(file,projectId),document.baseURI).href,pdfWindowName(projectId));
+ if(!opened){toast('Browser memblokir tab baru. Izinkan popup untuk alamat localhost.',true);return null;}
+ try{opened.focus()}catch{}return opened;
+}
+function setPdfView(view,{openTab=false}={}){
+ state.pdfView=view==='tab'?'tab':'split';localPref.set('ektex-pdf-view',state.pdfView);
+ const tab=state.pdfView==='tab';$('editor-workspace').classList.toggle('pdf-tab-mode',tab);
+ for(const [id,selected] of [['pdf-view-split',!tab],['pdf-view-tab',tab]]){
+  const el=$(id);el.classList.toggle('is-active',selected);el.setAttribute('aria-pressed',String(selected));
+ }
+ if(tab&&openTab&&state.preview&&state.previewFile===activeTex())openPdfTab();
+ syncCompileTarget();
+}
+$('pdf-view-split').onclick=()=>setPdfView('split');
+$('pdf-view-tab').onclick=()=>setPdfView('tab',{openTab:true});
+$('pdf-header-new-tab').onclick=()=>openPdfTab();
+$('editor-compile').onclick=()=>buildPdf(false);
+$('editor-clean').onclick=()=>buildPdf(true);
+$('editor-stop').onclick=()=>$('stop-compile').click();
+setPdfView(state.pdfView);
 function syncCompileTarget(){
  const file=activeTex();$('compile-target').textContent=file?'Target: '+file:'Pilih tab .tex';
  $('compile').disabled=state.build||!file;$('clean-compile').disabled=state.build||!file;
+ $('editor-compile').disabled=state.build||!file;$('editor-clean').disabled=state.build||!file;
 }
 function hidePreview(){
  $('pdf-frame').classList.add('hidden');$('pdf-frame').removeAttribute('src');$('pdf-empty').classList.remove('hidden');
@@ -248,7 +275,7 @@ function hidePreview(){
 }
 function refreshPdf(file=activeTex()){
  if(!state.project||!file)return;
- $('pdf-frame').src=`/api/projects/${state.project.id}/pdf?file=${encodeURIComponent(file)}&t=${Date.now()}#toolbar=1&navpanes=0`;
+ $('pdf-frame').src=pdfUrl(file);
  $('pdf-frame').classList.remove('hidden');$('pdf-empty').classList.add('hidden');
  state.preview=true;state.previewFile=file;$('preview-version').textContent='PDF: '+file;
 }
@@ -285,7 +312,16 @@ async function buildPdf(clean=false){
  const source=activeTex();if(!source)return toast('Pilih tab file .tex sebelum Compile.',true);
  state.build=true;
  const projectId=state.project.id,btn=$('compile'),cleanBtn=$('clean-compile'),stopBtn=$('stop-compile');
- btn.disabled=true;cleanBtn.disabled=true;stopBtn.classList.remove('hidden');stopBtn.disabled=false;
+ // Reserve a browser tab during the actual user gesture: browsers block window.open after async compilation.
+ let buildTab=null;
+ if(state.pdfView==='tab'){
+  buildTab=window.open('about:blank',pdfWindowName(projectId));
+  if(buildTab){
+   try{buildTab.document.title='EK TeX — Compiling';buildTab.document.body.textContent='EK TeX sedang mengompilasi '+source+'. Kembali ke editor untuk melihat proses.';}catch{}
+  }else toast('Tab PDF diblokir browser. Izinkan popup untuk localhost.',true);
+ }
+
+ btn.disabled=true;cleanBtn.disabled=true;$('editor-compile').disabled=true;$('editor-clean').disabled=true;stopBtn.classList.remove('hidden');stopBtn.disabled=false;$('editor-stop').classList.remove('hidden');$('editor-stop').disabled=false;
  $('compile-label').textContent='Compiling...';$('preview-version').textContent=clean?'Cleaning & compiling':'Compiling';
  $('build-summary').classList.add('hidden');state.log='';$('log-text').textContent='Memulai kompilasi...';toggleConsole(true);
  let interval;
@@ -300,14 +336,16 @@ async function buildPdf(clean=false){
   interval=setInterval(update,900);await update();
   const result=await pending;
   state.log=result.log||'';$('log-text').textContent=state.log||'(Tidak ada output)';renderBuildSummary(result);
-  if(result.ok){if(state.project?.id===projectId&&activeTex()===source){refreshPdf(source);$('preview-version').textContent='Built '+source+' · '+new Date().toLocaleTimeString('id-ID');}toast(clean?'Clean & Recompile berhasil.':'Kompilasi berhasil. PDF diperbarui.');statusText('Build success');}
-  else {toggleConsole(true);$('preview-version').textContent=result.pdfExists?'Build failed (PDF lama)':'Compilation failed';toast(result.summary||'Kompilasi gagal — periksa error.',true);statusText('Build error');}
+  if(result.ok){if(state.project?.id===projectId&&activeTex()===source){refreshPdf(source);$('preview-version').textContent='Built '+source+' · '+new Date().toLocaleTimeString('id-ID');}
+   if(buildTab&&!buildTab.closed){const target=new URL(pdfUrl(source,projectId),document.baseURI).href;try{buildTab.location.replace(target);}catch{buildTab.location.href=target;}}
+   toast(clean?'Clean & Recompile berhasil.':'Kompilasi berhasil. PDF diperbarui.');statusText('Build success');}
+  else {toggleConsole(true);$('preview-version').textContent=result.pdfExists?'Build failed (PDF lama)':'Compilation failed';toast(result.summary||'Kompilasi gagal — periksa error.',true);statusText('Build error');if(buildTab&&!buildTab.closed){try{buildTab.document.body.textContent='Kompilasi gagal: '+(result.summary||'Periksa log di editor EK TeX.');}catch{}}}
  }catch(e){state.log=e.message;$('log-text').textContent=e.message;renderBuildSummary({summary:e.message});toggleConsole(true);toast(e.message,true);$('preview-version').textContent='Compiler error';}
- finally{clearInterval(interval);state.build=false;btn.disabled=false;cleanBtn.disabled=false;stopBtn.classList.add('hidden');$('compile-label').textContent='Compile';syncCompileTarget();}
+ finally{clearInterval(interval);state.build=false;btn.disabled=false;cleanBtn.disabled=false;stopBtn.classList.add('hidden');$('editor-stop').classList.add('hidden');$('editor-stop').disabled=false;$('compile-label').textContent='Compile';syncCompileTarget();}
 }
 $('compile').onclick=()=>buildPdf(false);
 $('clean-compile').onclick=()=>buildPdf(true);
-$('stop-compile').onclick=async()=>{if(!state.build||!state.project)return;try{$('stop-compile').disabled=true;await api(`/api/projects/${state.project.id}/build/stop`,'POST');toast('Permintaan berhenti dikirim.')}catch(e){toast(e.message,true);$('stop-compile').disabled=false}};
+$('stop-compile').onclick=async()=>{if(!state.build||!state.project)return;try{$('stop-compile').disabled=true;$('editor-stop').disabled=true;await api(`/api/projects/${state.project.id}/build/stop`,'POST');toast('Permintaan berhenti dikirim.')}catch(e){toast(e.message,true);$('stop-compile').disabled=false;$('editor-stop').disabled=false}};
 $('engine').onchange=async()=>{if(!state.project)return;try{state.config=await api(`/api/projects/${state.project.id}/config`,'PATCH',{engine:$('engine').value});toast('Compiler: '+$('engine').selectedOptions[0].textContent)}catch(e){toast(e.message,true)}};
 function newProjectDialog(){state.selectedTemplate='article';const templates=[['article','Article','Makalah & jurnal'],['report','Report','Laporan ilmiah'],['thesis','Thesis','Tesis / disertasi'],['beamer','Beamer','Slide presentasi'],['blank','Blank','File kosong']];
  modal('Buat proyek LaTeX',`<label>Nama proyek</label><input id="new-project-name" value="Proyek Penelitian" maxlength="100" placeholder="Nama proyek"><label>Template dokumen</label><div class="template-grid">${templates.map(([id,name,desc])=>`<button class="template-item ${id==='article'?'selected':''}" data-template="${id}"><strong>${name}</strong><span>${desc}</span></button>`).join('')}</div>`,modalButtons('Buat proyek'),'NEW PROJECT');
@@ -363,7 +401,7 @@ $('dashboard-settings').onclick=configureDialog;
 function helpDialog(){modal('Setup compiler otomatis',`<p>Instalasi sekarang <strong>terintegrasi dengan launcher</strong>. Anda tidak perlu memasang latexmk satu per satu.</p><p><strong>Windows:</strong> Tutup server, lalu jalankan <code>start-windows.bat</code>. Launcher memeriksa Node.js, MiKTeX, Strawberry Perl, dan latexmk, kemudian menawarkan instalasi melalui WinGet.</p><div class="settings-code">start-windows.bat
 # Alternatif di PowerShell: ./setup-windows.ps1</div><p><strong>Ubuntu / Debian / Orange Pi:</strong></p><div class="settings-code">chmod +x start-linux.sh setup-linux.sh
 ./start-linux.sh</div><p>Perlu koneksi internet pada instalasi pertama dan untuk paket LaTeX yang belum terpasang. Jika installer gagal, periksa izin administrator/sudo dan pesan kesalahan di terminal.</p>`,`<button class="btn primary" data-cancel>Mengerti</button>`,'INSTALLER');}
-$('help-compile').onclick=helpDialog;$('preview-help').onclick=helpDialog;
+$('preview-help').onclick=helpDialog;
 $('show-shortcuts').onclick=()=>modal('Pintasan keyboard',`<p><strong>Ctrl + S</strong> — Simpan semua file</p><p><strong>Ctrl + Enter</strong> — Compile & refresh PDF</p><p><strong>Ctrl + F</strong> — Cari teks dalam dokumen</p><p><strong>Tab</strong> — Indent 2 spasi</p><p><strong>Shift + Tab</strong> — Hapus indent</p><p><strong>\</strong> — Tampilkan saran perintah LaTeX; panah ↑↓, Enter/Tab untuk memilih</p><p><strong>Esc</strong> — Tutup dialog biasa/autocomplete; popup Referensi hanya lewat tombol X</p>`,`<button class="btn primary" data-cancel>Oke</button>`,'SHORTCUTS');
 $('insert-figure').onclick=()=>insertCode(snippets.find(x=>x.title==='Figure').code);
 $('insert-cite').onclick=async()=>{try{await saveAll();const bib=await api(`/api/projects/${state.project.id}/file?path=references.bib`);const keys=[...bib.content.matchAll(/@\w+\s*\{\s*([^,\s]+)/g)].map(x=>x[1]);modal('Sisipkan kutipan',`<label>Citation key</label><input id="cite-key" list="cite-suggestions" value="${esc(keys[0]||'')}"><datalist id="cite-suggestions">${keys.map(k=>`<option value="${esc(k)}">`).join('')}</datalist><p>Pilih salah satu key dari references.bib, lalu tambahkan pada posisi kursor.</p>`,modalButtons('Sisipkan citation'),'BIBLIOGRAPHY');$('modal-apply').onclick=()=>{const key=$('cite-key').value.trim();closeModal();insertCode(`\\cite{${key}}`)};}catch(e){toast(e.message,true);setSide('references')}};

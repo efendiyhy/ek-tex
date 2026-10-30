@@ -1,6 +1,6 @@
 {
   "name": "latexstudio-local",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "description": "EK TeX by EK Instrumentation - browser-based LaTeX editor and PDF preview",
   "engines": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/project-quick-menu.js && node tests/smoke.js && node tests/installer-static.js && node tests/compile.js && node tests/tools.js && node tests/aux-dirs.js && node tests/workflows.js && node tests/editor-features.js && node tests/references.js && node tests/reference-abstract.js && node tests/ai-assistant.js && node tests/ai-ollama.js && node tests/find-replace.js",
+    "test": "node tests/project-quick-menu.js && node tests/smoke.js && node tests/installer-static.js && node tests/compile.js && node tests/tools.js && node tests/aux-dirs.js && node tests/workflows.js && node tests/editor-features.js && node tests/references.js && node tests/reference-abstract.js && node tests/ai-assistant.js && node tests/ai-ollama.js && node tests/find-replace.js && node tests/pdf-view-layout.js",
     "verify-latex": "node scripts/verify-compiler.js"
   }
 }

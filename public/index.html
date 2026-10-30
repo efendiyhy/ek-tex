@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/ai-assistant.css">
 <link rel="stylesheet" href="/find-replace.css">
 <link rel="stylesheet" href="/workspace-redesign.css">
+<link rel="stylesheet" href="/workspace-refinement.css">
 </head>
 <body>
 <a class="skip-to-editor" href="#editor-main">Langsung ke editor</a>
@@ -31,12 +32,18 @@
 </div>
  <div class="top-spacer"></div>
  <div class="system-badge" id="compiler-status"><span class="status-dot amber"></span><span>Memeriksa compiler</span></div>
+ 
+  <div class="pdf-view-controls editor-only" role="group" aria-label="Tampilan PDF">
+    <button class="pdf-view-button is-active" id="pdf-view-split" type="button" title="Tampilkan PDF di samping editor" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg><span>Split</span></button>
+    <button class="pdf-view-button" id="pdf-view-tab" type="button" title="Buka PDF di tab browser terpisah" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 14v5H4V5h7"/></svg><span>Tab baru</span></button>
+  </div>
+
  <button class="btn subtle editor-only" id="export-project" title="Unduh ZIP proyek"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3"/></svg><span>Export ZIP</span></button>
  <div class="avatar" title="Developer: EK Instrumentation">EK</div>
 </header>
 <section class="dashboard" id="dashboard" aria-label="Daftar proyek LaTeX">
   <div class="dash-shell">
-    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v3.0</div>
+    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v3.1</div>
     <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-settings" title="Pengaturan tema dan tampilan">⚙ Pengaturan</button><button class="btn outline" id="dashboard-references">⌕ Referensi</button><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
     <div class="dash-overview"><div class="dash-stat"><span>PROYEK</span><strong id="dash-count">0</strong><small>tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Pemeriksaan awal</small></div><div class="dash-stat dash-stat-side"><span>IMPOR</span><button id="dashboard-import" class="dash-quick">⇧ Proyek ZIP <span>↗</span></button><small>Overleaf atau ZIP lokal</small></div></div>
     <div class="dash-library-head"><div><h2>Proyek saya</h2><span id="dash-subtitle">Semua proyek</span></div><label class="dash-search">⌕ <input id="dashboard-search" type="search" placeholder="Cari nama proyek..." aria-label="Cari proyek"></label></div>
@@ -60,7 +67,7 @@
    <div class="side-title"><span>PROJECT FILES</span><div><button class="mini-btn" id="new-file" title="File baru">＋</button><button class="mini-btn" id="upload-file" title="Unggah file">⇧</button><button class="mini-btn" id="refresh-tree" title="Refresh">↻</button></div></div>
    <div class="sidebar-context"><span class="context-dot"></span><span id="sidebar-project">Artikel Pertama</span></div>
    <div id="file-tree" class="file-tree"></div>
-   <div class="side-info"><div class="side-info-head">GETTING STARTED</div><div class="side-info-copy">Edit <strong>main.tex</strong>, lalu klik Compile untuk membuat PDF.</div><button class="linkbtn" id="help-compile">Cara instal compiler <span>↗</span></button></div>
+   
   </section>
   <section class="sidepane hidden" id="side-references">
    <div class="side-title"><span>REFERENCES</span></div>
@@ -88,7 +95,7 @@
  </aside>
  <main class="main" id="editor-main" tabindex="-1">
   <div class="editor-top"><div class="tabs" id="tabs"></div><div class="tab-actions"><button id="toggle-console" class="tab-act" title="Log hasil kompilasi">≡</button></div></div>
-  <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari & ganti teks (Ctrl+F / Ctrl+H)">⌕ Find & Replace</button><span class="vline"></span><button class="toolbtn" id="open-reference-search">⌕ Referensi</button><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
+  <div class="editor-toolbar"><span class="editor-caption">SOURCE</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari & ganti teks (Ctrl+F / Ctrl+H)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></svg><span>Cari</span></button><span class="vline"></span><button class="toolbtn" id="open-reference-search" title="Cari referensi ilmiah"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M9 8h7M9 12h7M9 16h4"/></svg><span>Referensi</span></button><button class="toolbtn icon-only" id="insert-cite" title="Sisipkan sitasi" aria-label="Sisipkan sitasi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6H5a2 2 0 0 0-2 2v9h8v-7H7V8h4zm10 0h-6a2 2 0 0 0-2 2v9h8v-7h-4V8h4z"/></svg></button><button class="toolbtn icon-only" id="insert-figure" title="Sisipkan gambar" aria-label="Sisipkan gambar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="2"/><path d="m4 18 6-6 4 4 3-3 4 4"/></svg></button>  <div class="editor-build-actions" aria-label="Kompilasi ketika PDF dibuka di tab baru"><button class="btn compile-btn" type="button" id="editor-compile" title="Compile file aktif (Ctrl+Enter)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg><span>Compile</span></button><button class="iconbtn editor-clean" type="button" id="editor-clean" title="Clean & Recompile" aria-label="Clean & Recompile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></svg></button><button class="iconbtn editor-stop hidden" type="button" id="editor-stop" title="Stop Compile" aria-label="Stop Compile"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button></div></div>
   <div class="findbar hidden" id="findbar" role="search" aria-label="Cari dan ganti teks file aktif">
    <div class="findbar-fields"><label class="findbar-field"><span>Cari</span><input id="find-input" type="search" placeholder="Cari teks di file aktif..." autocomplete="off"/></label><label class="findbar-field"><span>Ganti dengan</span><input id="replace-input" type="text" placeholder="Teks pengganti..." autocomplete="off"/></label></div>
    <div class="findbar-controls"><span id="find-count" aria-live="polite">0 hasil</span><button type="button" id="find-prev" class="mini-btn" title="Sebelumnya (Shift+Enter)">↑</button><button type="button" id="find-next" class="mini-btn" title="Berikutnya (Enter)">↓</button><label class="findbar-toggle"><input type="checkbox" id="find-case"/> Aa</label><label class="findbar-toggle"><input type="checkbox" id="find-word"/> Kata utuh</label><button type="button" id="replace-one" class="btn outline" title="Ganti hasil terpilih">Ganti</button><button type="button" id="replace-all" class="btn outline" title="Ganti semua hasil pada file aktif">Ganti semua</button><button type="button" id="find-close" class="mini-btn" title="Tutup pencarian">✕</button></div>
@@ -98,13 +105,13 @@
   <div class="console hidden" id="console"><div class="console-head"><strong>OUTPUT · COMPILE LOG</strong><div><button id="open-debugger" title="Analisis log">⚑ Debug</button><button id="copy-log" title="Salin log">Copy</button><button id="close-console" title="Tutup">✕</button></div></div><div id="build-summary" class="build-summary hidden" aria-live="polite"></div><pre id="log-text">Belum ada log kompilasi.</pre></div>
  </main>
  <section class="preview" id="preview-panel">
-  <div class="preview-header"><div class="preview-heading"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zm10 0v5h5M8 13h8M8 17h6"/></svg><span>PDF PREVIEW</span></div><span class="preview-version" id="preview-version">Belum dikompilasi</span></div>
+  <div class="preview-header"><div class="preview-heading"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zm10 0v5h5M8 13h8M8 17h6"/></svg><span>PDF PREVIEW</span></div><div class="preview-heading-actions"><span class="preview-version" id="preview-version">Belum dikompilasi</span><button class="iconbtn pdf-header-open" id="pdf-header-new-tab" title="Buka pratinjau PDF di tab baru" aria-label="Buka pratinjau PDF di tab baru"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 14v5H4V5h7"/></svg></button></div></div>
   <div class="pdf-toolbar"><span class="compile-current" id="compile-target" title="File yang akan dikompilasi">Pilih file .tex</span><button class="btn compile-btn" id="compile"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><span id="compile-label">Compile</span></button><button class="btn clean-btn" id="clean-compile" title="Hapus cache hasil kompilasi lama lalu compile ulang. File .tex dan .bib tidak dihapus.">↻ Clean & Recompile</button><button class="btn stop-btn hidden" id="stop-compile" title="Hentikan proses kompilasi">■ Stop</button><select id="engine" title="Compiler"><option value="pdf">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><div class="grow"></div><button class="iconbtn" id="refresh-pdf" title="Muat ulang PDF">↻</button><button class="iconbtn" id="download-pdf" title="Buka / unduh PDF">⇩</button></div>
   <div class="pdf-host" id="pdf-host"><div class="pdf-empty" id="pdf-empty"><div class="paper-illustration"><div class="paper-line thick"></div><div class="paper-line"></div><div class="paper-line short"></div><div class="paper-rule"></div><div class="paper-equation">∫ f(x) dx</div><div class="paper-line"></div><div class="paper-line short"></div></div><h3>Preview dokumen Anda</h3><p>Klik <strong>Compile</strong> untuk membuat dan melihat hasil PDF di sini.</p><div class="kbd">Ctrl + Enter</div></div><iframe id="pdf-frame" class="hidden" title="Hasil kompilasi PDF"></iframe></div>
   <div class="preview-footer"><span><i class="footer-dot"></i> Local rendering</span><button id="preview-help">Panduan PDF ↗</button></div>
  </section>
 </div>
-<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v3.0</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
+<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v3.1</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
 </div>
 <!-- Floating AI chat. Always opens from the lower-right corner of the editor. -->
 <button id="ai-launcher" class="ai-launcher hidden" type="button" aria-label="Buka Asisten AI" aria-controls="ai-drawer" aria-expanded="false"><span class="ai-launcher-icon">✦</span><span>AI Assistant</span></button>

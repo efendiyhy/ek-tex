@@ -10,18 +10,21 @@
   <a href="CHANGELOG.md">Release Notes</a>
 </p>
 
-**EK TeX v3.0** merupakan editor LaTeX berbasis browser yang berjalan pada komputer pengguna. Aplikasi menyediakan dashboard proyek, editor multi-file, kompilasi dan pratinjau PDF, diagnostik LaTeX, pengelolaan BibTeX, AI Chat Assistant (Hermes atau Ollama), integrasi Hermes Agent opsional, dan konversi dokumen melalui Pandoc.
+**EK TeX v3.1** merupakan editor LaTeX berbasis browser yang berjalan pada komputer pengguna. Aplikasi menyediakan dashboard proyek, editor multi-file, kompilasi dan pratinjau PDF, diagnostik LaTeX, pengelolaan BibTeX, AI Chat Assistant (Hermes atau Ollama), integrasi Hermes Agent opsional, dan konversi dokumen melalui Pandoc.
 
 Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet diperlukan untuk pencarian metadata referensi, instalasi dependensi, atau layanan model AI eksternal yang digunakan melalui Hermes.
 
-> **Versi 3.0:** Dashboard, editor, PDF preview, dan dialog menggunakan sistem desain baru dengan tipografi konsisten, permukaan datar, serta pilihan lima palet warna. Gambar berikut adalah dokumentasi fungsi dari versi sebelumnya.
+> **Versi 3.1:** Tampilan editor menggunakan panel membulat, scrollbar sesuai tema, dan kontrol PDF Split/Tab baru yang dapat dipilih. Panel petunjuk GETTING STARTED sudah dihapus.
 
-![Dokumentasi dashboard EK TeX versi sebelumnya](docs/dashboard-v27.png)
+![Tampilan editor EK TeX v3.1 dalam mode gelap dan Split View](docs/editor-split-dark-v31.png)
+
+<sub>Pratinjau antarmuka menggunakan proyek contoh. Bukan hasil kompilasi tesis pengguna.</sub>
 
 ## Contents
 
 - [Features](#features)
 - [Project switching and appearance](#project-switching-and-appearance)
+- [PDF view options](#pdf-view-options)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Updating EK TeX](#updating-ek-tex)
@@ -41,13 +44,13 @@ Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet d
 |---|---|
 | Workspace | Dashboard daftar proyek, rename/delete, import/export ZIP, dan **menu + untuk membuka proyek lain atau membuat proyek baru tanpa kembali ke dashboard** |
 | Source editor | Syntax highlighting, autosave, multi-tab, **Find & Replace / Replace All**, LaTeX autocomplete, error-line highlighting, minimizable sidebar |
-| PDF compiler | pdfLaTeX, XeLaTeX, LuaLaTeX via `latexmk`; active-file compilation, PDF preview, Clean & Recompile, live log, Stop |
+| PDF compiler | pdfLaTeX, XeLaTeX, LuaLaTeX via `latexmk`; active-file compilation, **Split View / Open in New Tab**, Clean & Recompile, live log, Stop |
 | Bibliography | Dedicated popup for title/author/DOI search, expandable **abstract preview** from Crossref or OpenAlex, and BibTeX import |
 | Contextual reference lookup | Highlight a sentence → **Cari Referensi** → editable keyword extraction → search and optionally insert `\cite{key}` |
 | AI Writing Assistant | Floating AI chat at bottom-right, selected-text replacement, grammar/academic/LaTeX assistance, reviewable changes, Hermes or Ollama model |
 | Optional Hermes integration | Keyword suggestions and source-code diagnostics when Hermes Agent has been installed and configured |
 | Document conversion | DOCX, ODT, Markdown and HTML conversions through Pandoc; converted LaTeX becomes a separate project |
-| Appearance | **Forest, Ocean, Plum, Clay, Graphite**, masing-masing Light dan Dark; preferensi disimpan di browser |
+| Appearance | **Forest, Ocean, Plum, Clay, Graphite**, masing-masing Light dan Dark; panel lebih membulat dan scrollbar mengikuti tema |
 
 ![EK TeX editor dark theme](docs/editor-dark-v27.png)
 
@@ -70,6 +73,25 @@ Perubahan yang belum disimpan diproses oleh autosave dan `saveAll()` sebelum ber
 EK TeX menggunakan skala tipografi dan ruang yang lebih konsisten, warna permukaan tanpa gradien, navigasi yang berfokus pada keyboard, dan animasi yang memperhatikan preferensi pengurangan gerakan. Gaya visual disusun berdasarkan skill desain yang diberikan untuk pengembangan ini.
 
 Di **Settings → Tampilan editor**, pilih salah satu palet **Forest**, **Ocean**, **Plum**, **Clay**, atau **Graphite**, kemudian pilih mode **Light** atau **Dark**. Pilihan berlaku untuk dashboard, editor, panel file, PDF, popup pencarian referensi, dan AI Chat serta disimpan di browser. Mode offline tetap berfungsi tanpa perlu mengunduh font dari internet; aplikasi menggunakan font lokal yang tersedia pada perangkat sebagai fallback.
+
+## PDF view options
+
+Gunakan pilihan berikon di **toolbar bagian atas** saat editor terbuka:
+
+- **Split:** kode LaTeX di sebelah kiri, pratinjau PDF di sebelah kanan. Setelah Compile, PDF muncul di dalam EK TeX.
+- **Tab baru:** pratinjau samping disembunyikan sehingga editor mendapat ruang lebih luas. Jika PDF sudah tersedia, tombol ini membukanya langsung di tab browser terpisah. Jika belum ada PDF, klik **Compile**; EK TeX menyiapkan tab pada saat tombol ditekan dan menampilkannya setelah kompilasi berhasil. Jika browser memblokir tab baru, izinkan popup untuk `127.0.0.1:3457` atau kembali ke Split.
+
+Dalam mode Tab baru, tombol **Compile**, **Clean & Recompile**, dan **Stop** tetap tersedia pada toolbar kode. Pilihan mode disimpan di browser agar tidak berubah ketika halaman dibuka kembali.
+
+![Mode editor dengan PDF dibuka di tab browser terpisah](docs/editor-tab-mode-v31.png)
+
+### Appearance improvements
+
+Seluruh scrollbar aplikasi mengikuti Light/Dark mode, termasuk file tree, source editor, Output, panel referensi, dan AI Chat. Kontrol dan permukaan panel menggunakan sudut yang lebih membulat. Scrollbar **di dalam penampil PDF bawaan browser** mungkin tetap mengikuti pengaturan browser atau sistem operasi dan tidak dapat dipaksa warnanya oleh aplikasi.
+
+![Tampilan EK TeX v3.1 dalam mode terang](docs/editor-split-light-v31.png)
+
+Panel petunjuk **GETTING STARTED** yang sebelumnya menampilkan instruksi mengedit `main.tex` dan tautan instalasi compiler sudah dihapus. Panduan instalasi tetap tersedia di README ini.
 
 ## Requirements
 
@@ -180,7 +202,7 @@ After inspecting results, choose **Simpan ke BibTeX** or **Simpan & kutip**. The
 2. Write LaTeX; typing `\` opens autocomplete. Use arrows and Enter/Tab to insert suggestions.
 3. Select a compiler (pdfLaTeX / XeLaTeX / LuaLaTeX) and click **Compile** or press `Ctrl+Enter`. The **active `.tex` file** is the compilation target.
 4. Inspect the PDF preview or compiler output. Clicking a line-numbered error opens the relevant source and highlights its line.
-5. Use **Clean & Recompile** after corrections to remove build cache (not source files).
+5. Gunakan **Split** untuk melihat PDF di sisi editor atau **Tab baru** untuk membukanya secara terpisah. Gunakan **Clean & Recompile** setelah koreksi untuk membersihkan cache (bukan file sumber).
 
 For `\include{Isi/Bab1}`, the application prepares corresponding subdirectories under `.latexstudio-build` before compilation. Individual chapter fragments without a preamble cannot always be compiled as standalone documents.
 
@@ -200,7 +222,7 @@ For `\include{Isi/Bab1}`, the application prepares corresponding subdirectories 
 
 ## Troubleshooting
 
-**Missing `.sty`:** Install the relevant TeX package, e.g. `sudo apt install texlive-science` for `algorithmic.sty` on Ubuntu. **Previous invocation of latexmk failed:** Use Clean & Recompile; inspect the first real error in Output. **Styles not loading:** Access `http://127.0.0.1:3457`, verify the `public/` assets exist, restart the server, and reload without browser cache. **Hermes unavailable:** Install/configure it separately, or edit the automatically generated offline keywords.
+**Missing `.sty`:** Install the relevant TeX package, e.g. `sudo apt install texlive-science` for `algorithmic.sty` on Ubuntu. **Previous invocation of latexmk failed:** Use Clean & Recompile; inspect the first real error in Output. **Styles not loading:** Access `http://127.0.0.1:3457`, verify `public/workspace-refinement.css` and other `public/` assets exist, restart the server, and reload without browser cache. **Hermes unavailable:** Install/configure it separately, or edit the automatically generated offline keywords.
 
 To run the automated project tests:
 

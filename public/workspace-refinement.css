@@ -1,0 +1,110 @@
+/* EK TeX v3.1: softer workspaces, themed scrollbars and flexible PDF viewing. */
+:root{--radius-panel:24px;--radius-control:12px;--radius-popover:20px}
+body[data-mode="dark"]{
+ color-scheme:dark;
+ --scroll-track:#1f1f1f;--scroll-thumb:#505050;--scroll-hover:#737373;
+ --shell-outline:#3a3a3a;
+}
+body[data-mode="light"]{
+ color-scheme:light;
+ --scroll-track:#f1f3f6;--scroll-thumb:#b6bdc8;--scroll-hover:#8894a4;
+ --shell-outline:#e2e5ea;
+}
+/* Keep the native form widgets and ALL app scrollbars consistent with the selected mode. */
+html,body,body *{scrollbar-color:var(--scroll-thumb) var(--scroll-track);scrollbar-width:thin}
+body ::-webkit-scrollbar{width:10px;height:10px}
+body ::-webkit-scrollbar-track{background:var(--scroll-track);border-radius:12px}
+body ::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border:2px solid var(--scroll-track);border-radius:12px}
+body ::-webkit-scrollbar-thumb:hover{background:var(--scroll-hover)}
+body ::-webkit-scrollbar-corner{background:var(--scroll-track)}
+/* The browser's internal PDF plugin may use its own scrollbar theme. */
+.topbar{gap:12px}
+.topbar .iconbtn,.topbar .avatar,.topbar .project-btn,.system-badge{border-radius:12px}
+.topbar .top-add{border-radius:12px}
+.project-quick-menu,.dialog,.reference-dialog{border-radius:20px;overflow:hidden}
+.project-quick-menu button,.project-switch-option{border-radius:12px}
+.dashboard .dash-heading .dash-developer,.dash-search,.dash-stat,.dash-project-row,.dash-no-results{border-radius:20px}
+.dash-primary,.btn,.btn.primary,.btn.outline,.toolbtn,.mini-btn,.iconbtn,.dash-action{border-radius:12px}
+.dash-stat{box-shadow:0 8px 28px var(--ui-shadow)}
+.dashboard .dash-search:focus-within{outline:2px solid var(--theme-accent);outline-offset:2px}
+/* Each workspace region has a gently rounded independent surface rather than sharp dividing lines. */
+.workspace{min-height:0;gap:8px;padding:8px;background:var(--ui-bg)!important;align-items:stretch}
+.workspace .rail{border:1px solid var(--shell-outline);border-radius:20px;overflow:hidden;flex-shrink:0}
+.workspace .sidebar{border:1px solid var(--shell-outline);border-radius:20px;overflow:hidden;min-height:0}
+.workspace .main{border:1px solid var(--shell-outline);border-radius:20px;overflow:hidden;min-width:0;flex:1}
+.workspace .preview{border:1px solid var(--shell-outline);border-radius:20px;overflow:hidden;min-width:300px;min-height:0}
+.workspace.sidebar-collapsed .sidebar{display:none!important}
+.file-tree{min-height:0;overflow:auto}
+.file-tree .tree-file,.railbtn,.tab,.template-item,.reference-item,.ai-popup,.ai-welcome,.ai-compose textarea,.console,.reference-context,.reference-abstract{border-radius:12px}
+.editor-top .tabs{scrollbar-width:thin}
+.tab{border-radius:10px 10px 0 0}
+.editor-surface{min-height:0}
+#pdf-frame{border:0;display:block;width:100%;height:100%;background:var(--ui-pdf)}
+/* A new-tab mode expands source editor, retaining toolbar compile/clean/stop controls. */
+.workspace.pdf-tab-mode .preview{display:none!important}
+.workspace.pdf-tab-mode .main{max-width:none;flex:1;min-width:0}
+.editor-build-actions{display:none;align-items:center;gap:8px}
+.workspace.pdf-tab-mode .editor-build-actions{display:flex}
+.editor-build-actions .compile-btn{display:flex;align-items:center;gap:6px;padding:6px 12px}
+.editor-build-actions .iconbtn{display:grid;place-items:center;min-width:34px;height:34px;border:1px solid var(--ui-border);background:var(--ui-panel)}
+.editor-build-actions .iconbtn:hover{background:var(--ui-subtle)}
+.editor-build-actions svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.editor-build-actions .compile-btn svg{fill:currentColor;stroke:none;width:14px;height:14px}
+/* View mode selector lives in the always-visible app bar. */
+.pdf-view-controls{display:flex;align-items:center;gap:2px;padding:4px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:14px}
+.pdf-view-button{height:34px;border:0;border-radius:10px;background:transparent;display:flex;align-items:center;gap:6px;padding:0 12px;font-weight:600;font-size:12px;color:var(--ui-muted);white-space:nowrap}
+.pdf-view-button:hover{background:var(--ui-subtle);color:var(--ui-strong)}
+.pdf-view-button.is-active{background:var(--ui-surface);color:var(--ui-strong);box-shadow:0 2px 8px var(--ui-shadow)}
+.pdf-view-button.is-active svg{color:var(--theme-accent)}
+.pdf-view-button svg,.pdf-header-open svg{width:17px;height:17px;flex:0 0 17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.preview-heading-actions{display:flex;align-items:center;gap:12px}
+.preview-heading-actions .pdf-header-open{border:1px solid var(--ui-border);background:var(--ui-panel);width:32px;height:32px;display:grid;place-items:center}
+.preview-heading-actions .pdf-header-open:hover{background:var(--ui-subtle);border-color:var(--theme-accent)}
+.preview-heading-actions .pdf-header-open svg{width:16px;height:16px}
+.preview-header{height:54px;flex-basis:54px}
+.pdf-toolbar{gap:8px}
+.pdf-host{background:var(--ui-pdf)}
+.ai-popup,.reference-item,.reference-doi,.reference-context,.reference-abstract{border-radius:20px}
+.ai-message,.ai-proposal,.reference-body input,.reference-body select{border-radius:12px}
+.ai-launcher{border-radius:16px}
+.theme-swatch{border-radius:16px}
+.theme-swatch span{border-radius:12px}
+.settings-select{border-radius:12px}
+/* Avoid flashing older light scrollbars when theme changes or on dark mode. */
+.code-container textarea,.reference-body,.reference-results,.ai-messages,#log-text,.tabs,.project-switch-list,.file-tree,.sidebar{
+ scrollbar-color:var(--scroll-thumb) var(--scroll-track);scrollbar-width:thin;
+}
+@media(max-width:1150px){
+ .pdf-view-button{padding:0 8px}
+ .workspace{gap:6px;padding:6px}
+ .pdf-toolbar .clean-btn{min-width:36px}
+}
+@media(max-width:800px){
+ .pdf-view-button span{display:none}
+ .pdf-view-button{width:34px;justify-content:center;padding:0}
+ .workspace .preview{min-width:265px}
+}
+@media(max-width:580px){
+ .workspace{gap:6px;overflow:auto}
+ .workspace .main{min-height:48vh}
+ .workspace .preview{min-height:40vh;width:100%;min-width:0;flex-shrink:0}
+ .workspace.pdf-tab-mode .main{min-height:75vh}
+ .pdf-view-controls{margin-left:auto}
+ .workspace .rail{display:none}
+ .editor-toolbar{gap:4px;padding:0 8px}
+ .editor-build-actions{gap:3px}
+}
+@media(prefers-reduced-motion:reduce){
+ .pdf-view-button,.workspace .main,.workspace .preview{transition:none!important}
+}
+
+/* Compact, readable source actions in split view */
+.editor-toolbar{gap:6px;padding:0 12px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+.editor-toolbar .editor-caption{white-space:nowrap;flex-shrink:0;font-size:12px}
+.editor-toolbar .save-indicator{white-space:nowrap;font-size:11px}
+.editor-toolbar .toolbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;font-size:12px;padding:6px 8px;min-height:32px;white-space:nowrap}
+.editor-toolbar .toolbtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.editor-toolbar #insert-cite svg{fill:currentColor;stroke:none}
+.editor-toolbar .toolbtn.icon-only{width:34px;padding:6px}
+.editor-toolbar .vline{flex:0 0 1px}
+@media(max-width:760px){.editor-toolbar .editor-caption{display:none}.editor-toolbar .save-indicator{font-size:10px}}
