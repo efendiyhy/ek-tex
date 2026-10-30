@@ -9,7 +9,7 @@ function applyAppearance(theme=state.theme,mode=state.mode){
  state.theme=features.validTheme(theme);state.mode=features.validMode(mode);
  document.body.dataset.theme=state.theme;document.body.dataset.mode=state.mode;
  localPref.set('ektex-theme',state.theme);localPref.set('ektex-mode',state.mode);
- const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=state.mode==='dark'?'#111b2d':'#f4f7fb';
+ const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=state.mode==='dark'?'#181818':'#F6F7F9';
 }
 applyAppearance();
 
@@ -314,8 +314,28 @@ function newProjectDialog(){state.selectedTemplate='article';const templates=[['
  document.querySelectorAll('[data-template]').forEach(b=>b.onclick=()=>{state.selectedTemplate=b.dataset.template;document.querySelectorAll('[data-template]').forEach(t=>t.classList.toggle('selected',t===b))});
  $('modal-apply').onclick=async()=>{const name=$('new-project-name').value.trim();if(!name)return toast('Masukkan nama proyek.',true);try{const p=await api('/api/projects','POST',{name,template:state.selectedTemplate});await loadProjects();closeModal();await chooseProject(p.id);toast('Proyek berhasil dibuat.')}catch(e){toast(e.message,true)}};
  $('new-project-name').focus();$('new-project-name').select();}
-$('new-project').onclick=newProjectDialog;$('new-from-template').onclick=newProjectDialog;
-function oldProjectPicker(){modal('Pilih proyek',`<div class="project-list">${state.projects.map(p=>`<button data-open-project="${esc(p.id)}"><span>⌁ &nbsp; ${esc(p.name)}</span><small>${p.id===state.project?.id?'CURRENT':'OPEN ↗'}</small></button>`).join('')}</div><p>Seluruh proyek disimpan pada folder workspace aplikasi.</p>`,`<button class="btn" id="import-zip">⇧ Import ZIP</button><button class="btn primary" id="modal-apply">＋ Proyek baru</button>`,'YOUR WORKSPACE');document.querySelectorAll('[data-open-project]').forEach(b=>b.onclick=async()=>{try{closeModal();await chooseProject(b.dataset.openProject)}catch(e){toast(e.message,true)}});$('modal-apply').onclick=newProjectDialog;$('import-zip').onclick=()=>$('zip-input').click();};
+// The plus button offers project switching without returning to the dashboard.
+const quickMenu=$('project-quick-menu'),quickToggle=$('new-project');
+function setQuickMenu(open){quickMenu.classList.toggle('hidden',!open);quickToggle.setAttribute('aria-expanded',String(open));if(open)quickMenu.querySelector('[role="menuitem"]')?.focus();}
+quickToggle.onclick=()=>setQuickMenu(quickMenu.classList.contains('hidden'));
+document.addEventListener('pointerdown',event=>{if(!event.target.closest('.project-quick-wrap'))setQuickMenu(false)});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!quickMenu.classList.contains('hidden')){setQuickMenu(false);quickToggle.focus();}});
+$('quick-open-project').onclick=async()=>{setQuickMenu(false);try{await loadProjects();projectSelectionDialog()}catch(err){toast('Tidak dapat memuat proyek: '+err.message,true)}};
+$('quick-new-project').onclick=()=>{setQuickMenu(false);newProjectDialog()};
+$('quick-import-project').onclick=()=>{setQuickMenu(false);$('zip-input').click()};
+$('new-from-template').onclick=newProjectDialog;
+function projectSelectionDialog(){
+ const projects=[...state.projects].sort((a,b)=>new Date(b.updated)-new Date(a.updated));
+ modal('Buka proyek tersimpan',`<label for="project-switch-search">Temukan proyek</label><input type="search" id="project-switch-search" placeholder="Cari nama proyek" autocomplete="off"><div id="project-switch-list" class="project-switch-list" role="list"></div>`, `<button class="btn" data-cancel>Tutup</button><button class="btn primary" id="switch-create">Buat proyek baru</button>`, 'YOUR WORKSPACE');
+ const host=$('project-switch-list'),search=$('project-switch-search');
+ function draw(){const q=search.value.toLowerCase().trim();host.replaceChildren();const found=projects.filter(p=>p.name.toLowerCase().includes(q)||(p.main||'').toLowerCase().includes(q));
+   if(!found.length){const empty=document.createElement('p');empty.className='project-switch-empty';empty.textContent=projects.length?'Tidak ditemukan proyek dengan nama tersebut.':'Belum ada proyek. Mulai dengan membuat proyek baru.';host.append(empty);return;}
+   found.forEach(p=>{const button=document.createElement('button');button.type='button';button.className='project-switch-option';button.dataset.projectId=p.id;const active=p.id===state.project?.id;
+     button.innerHTML=`<span class="switch-file-icon">T</span><span class="switch-project-name"><strong>${esc(p.name)}</strong><small>${esc(p.main||'main.tex')} · ${fmtDate(p.updated)}</small></span>${active?'<span class="switch-current">Sedang dibuka</span>':'<span class="switch-open">Buka ↗</span>'}`;
+     button.onclick=async()=>{if(active){closeModal();return;}try{await chooseProject(p.id);closeModal();toast('Proyek dibuka: '+p.name)}catch(e){toast(e.message,true)}};host.append(button)});
+ }
+ search.oninput=draw;draw();$('switch-create').onclick=()=>newProjectDialog();search.focus();
+}
 $('project-picker').onclick=()=>goDashboard().catch(e=>toast('Gagal kembali ke dashboard: '+e.message,true));
 function fileActions(p){modal('Kelola file',`<p><strong>${esc(p)}</strong></p><label>Nama baru / lokasi baru</label><input id="rename-path" value="${esc(p)}"><p>Mengubah nama file memperbarui tab jika sedang terbuka. Untuk menghapus, pastikan file bukan main document.</p>`, `<button class="btn danger" id="delete-file">Hapus</button>`+modalButtons('Rename'),'FILE ACTIONS');
  $('modal-apply').onclick=async()=>{try{await saveAll();let newP=$('rename-path').value.trim();if(newP===p)return closeModal();await api(`/api/projects/${state.project.id}/file`,'PATCH',{path:p,newPath:newP});if(state.docs.has(p)){const d=state.docs.get(p);state.docs.delete(p);state.docs.set(newP,d)}state.tabs=state.tabs.map(t=>t===p?newP:t);if(state.active===p)state.active=newP;closeModal();renderTabs();await reloadTree();toast('File berhasil diubah namanya.')}catch(e){toast(e.message,true)}};

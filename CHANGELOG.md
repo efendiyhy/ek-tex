@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.0.0 — Editor redesign and project switcher (30 October 2026)
+
+- Mengubah tombol `+` editor dari pembuatan proyek langsung menjadi menu **Open saved project / New project / Import ZIP**.
+- Menambahkan pemilih proyek tersimpan yang mendukung pencarian dan penanda proyek aktif. Pergantian proyek memakai penyimpanan yang sudah tersedia.
+- Membuat sistem antarmuka yang lebih konsisten sesuai panduan desain pengguna: palet warna datar, tipografi, grid spacing, ukuran kontrol, radius, state keyboard, dan reduced-motion.
+- Memperluas pilihan tampilan menjadi lima palet (Forest, Ocean, Plum, Clay, Graphite) dengan Light/Dark.
+- Merapikan dashboard, tab editor, panel PDF, popup referensi, AI Assistant, dan settings tanpa mengubah penyimpanan `workspace/`.
+- Menambah pengujian untuk menu dan assets desain serta memperbarui dokumentasi penggunaan.
+
+**Compatibility:** Mempertahankan endpoint dan struktur proyek dari v2.9.2. Tidak memerlukan migrasi file dokumen.
+
+---
+
+
 ## 2.9.2 — Find & Replace and Floating AI Chat
 
 - Introduced Find & Replace for the current file, with one-click Replace, Replace All, case sensitivity and whole-word matching.

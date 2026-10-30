@@ -10,17 +10,18 @@
   <a href="CHANGELOG.md">Release Notes</a>
 </p>
 
-**EK TeX** merupakan editor LaTeX berbasis browser yang berjalan pada komputer pengguna. Aplikasi menyediakan dashboard proyek, editor multi-file, kompilasi dan pratinjau PDF, diagnostik LaTeX, pengelolaan BibTeX, AI Chat Assistant (Hermes atau Ollama), integrasi Hermes Agent opsional, dan konversi dokumen melalui Pandoc.
+**EK TeX v3.0** merupakan editor LaTeX berbasis browser yang berjalan pada komputer pengguna. Aplikasi menyediakan dashboard proyek, editor multi-file, kompilasi dan pratinjau PDF, diagnostik LaTeX, pengelolaan BibTeX, AI Chat Assistant (Hermes atau Ollama), integrasi Hermes Agent opsional, dan konversi dokumen melalui Pandoc.
 
 Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet diperlukan untuk pencarian metadata referensi, instalasi dependensi, atau layanan model AI eksternal yang digunakan melalui Hermes.
 
-![EK TeX dashboard dengan daftar proyek](docs/dashboard-v27.png)
+> **Versi 3.0:** Dashboard, editor, PDF preview, dan dialog menggunakan sistem desain baru dengan tipografi konsisten, permukaan datar, serta pilihan lima palet warna. Gambar berikut adalah dokumentasi fungsi dari versi sebelumnya.
 
-<sub>Contoh tampilan dashboard. Tampilan editor dan pengaturan dapat berubah mengikuti tema serta ukuran layar.</sub>
+![Dokumentasi dashboard EK TeX versi sebelumnya](docs/dashboard-v27.png)
 
 ## Contents
 
 - [Features](#features)
+- [Project switching and appearance](#project-switching-and-appearance)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Updating EK TeX](#updating-ek-tex)
@@ -38,7 +39,7 @@ Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet d
 
 | Module | Capabilities |
 |---|---|
-| Workspace | Dashboard daftar proyek, create/rename/delete, import/export ZIP |
+| Workspace | Dashboard daftar proyek, rename/delete, import/export ZIP, dan **menu + untuk membuka proyek lain atau membuat proyek baru tanpa kembali ke dashboard** |
 | Source editor | Syntax highlighting, autosave, multi-tab, **Find & Replace / Replace All**, LaTeX autocomplete, error-line highlighting, minimizable sidebar |
 | PDF compiler | pdfLaTeX, XeLaTeX, LuaLaTeX via `latexmk`; active-file compilation, PDF preview, Clean & Recompile, live log, Stop |
 | Bibliography | Dedicated popup for title/author/DOI search, expandable **abstract preview** from Crossref or OpenAlex, and BibTeX import |
@@ -46,13 +47,29 @@ Dokumen proyek disimpan secara lokal di direktori `workspace/`. Akses internet d
 | AI Writing Assistant | Floating AI chat at bottom-right, selected-text replacement, grammar/academic/LaTeX assistance, reviewable changes, Hermes or Ollama model |
 | Optional Hermes integration | Keyword suggestions and source-code diagnostics when Hermes Agent has been installed and configured |
 | Document conversion | DOCX, ODT, Markdown and HTML conversions through Pandoc; converted LaTeX becomes a separate project |
-| Appearance | Emerald, Ocean Blue, Amethyst, Copper; light and dark modes saved in the browser |
+| Appearance | **Forest, Ocean, Plum, Clay, Graphite**, masing-masing Light dan Dark; preferensi disimpan di browser |
 
 ![EK TeX editor dark theme](docs/editor-dark-v27.png)
 
 ![AI Assistant floating beside the LaTeX source editor](docs/ai-floating-v292.png)
 
-<sub>Floating AI Chat and Find & Replace bar in EK TeX v2.9.2.</sub>
+<sub>Dokumentasi fitur AI Chat dan Find & Replace dari versi sebelum redesain. Semua fitur tersebut tetap tersedia di v3.0.</sub>
+
+## Project switching and appearance
+
+Pada editor, tombol **+** di sebelah nama proyek sekarang membuka menu dengan tiga opsi:
+
+1. **Buka proyek tersimpan:** menampilkan dialog proyek yang dapat dicari berdasarkan nama atau file utama. Klik salah satu untuk membuka proyek tanpa kembali ke halaman utama. Proyek yang aktif diberi penanda.
+2. **Buat proyek baru:** buka dialog pemilihan template Article, Report, Thesis, Beamer, atau Blank.
+3. **Impor proyek ZIP:** pilih arsip proyek dari laptop untuk menambahkannya ke workspace.
+
+Perubahan yang belum disimpan diproses oleh autosave dan `saveAll()` sebelum berpindah proyek. Jika penyimpanan gagal, navigasi dibatalkan dan pengguna menerima pesan error.
+
+### Interface and themes
+
+EK TeX menggunakan skala tipografi dan ruang yang lebih konsisten, warna permukaan tanpa gradien, navigasi yang berfokus pada keyboard, dan animasi yang memperhatikan preferensi pengurangan gerakan. Gaya visual disusun berdasarkan skill desain yang diberikan untuk pengembangan ini.
+
+Di **Settings → Tampilan editor**, pilih salah satu palet **Forest**, **Ocean**, **Plum**, **Clay**, atau **Graphite**, kemudian pilih mode **Light** atau **Dark**. Pilihan berlaku untuk dashboard, editor, panel file, PDF, popup pencarian referensi, dan AI Chat serta disimpan di browser. Mode offline tetap berfungsi tanpa perlu mengunduh font dari internet; aplikasi menggunakan font lokal yang tersedia pada perangkat sebagai fallback.
 
 ## Requirements
 

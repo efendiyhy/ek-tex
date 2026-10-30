@@ -2,10 +2,11 @@
 (function(root){
  'use strict';
  const themes={
-  teal:{label:'Emerald',accent:'#2dbda6'},
-  ocean:{label:'Ocean Blue',accent:'#518fe5'},
-  violet:{label:'Amethyst',accent:'#a487ed'},
-  amber:{label:'Copper',accent:'#d69653'}
+  teal:{label:'Forest',accent:'#20AA83'},
+  ocean:{label:'Ocean',accent:'#4A86D9'},
+  violet:{label:'Plum',accent:'#9C7BCE'},
+  amber:{label:'Clay',accent:'#C68A53'},
+  slate:{label:'Graphite',accent:'#9CA3AF'}
  };
  const entries=[
   ['section','Struktur','\\section{|}'],['subsection','Struktur','\\subsection{|}'],['subsubsection','Struktur','\\subsubsection{|}'],['chapter','Struktur','\\chapter{|}'],['part','Struktur','\\part{|}'],['paragraph','Struktur','\\paragraph{|}'],

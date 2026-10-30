@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const html=read('public/index.html'),app=read('public/app.js'),style=read('public/workspace-redesign.css');
+for(const id of ['project-quick-menu','quick-open-project','quick-new-project','quick-import-project'])assert.ok(html.includes(`id="${id}"`),`missing ${id}`);
+assert.ok(html.includes('aria-expanded="false"'));
+assert.ok(app.includes('function projectSelectionDialog()'));
+assert.ok(app.includes('await loadProjects();projectSelectionDialog()'));
+assert.ok(app.includes("$('new-project').onclick=newProjectDialog")===false,'plus must not directly start new project');
+assert.ok(app.includes('await chooseProject(p.id)'), 'project switching should reuse existing saved data workflow');
+assert.ok(html.includes('/workspace-redesign.css'),'redesign stylesheet must load');
+assert.ok(style.includes('prefers-reduced-motion'),'accessibility motion preference');
+assert.ok(!/background:\s*linear-gradient\(/i.test(style),'no gradient surfaces in redesign');
+assert.equal(Object.keys(require('../public/editor-features').themes).length,5);
+console.log('Project quick menu, theme presets and redesign assets: passed');

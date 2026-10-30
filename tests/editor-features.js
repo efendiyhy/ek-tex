@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const f=require('../public/editor-features');
-assert.equal(Object.keys(f.themes).length,4);
+assert.equal(Object.keys(f.themes).length,5);
 for(const id of Object.keys(f.themes)){assert.equal(f.validTheme(id),id);}
 assert.equal(f.validTheme('invalid'),'teal');
 assert.equal(f.validMode('light'),'light');

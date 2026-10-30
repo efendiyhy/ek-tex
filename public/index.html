@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d1423"><meta name="description" content="EK TeX, editor LaTeX lokal yang dikembangkan oleh EK Instrumentation."><title>EK TeX — LaTeX Workspace | EK Instrumentation</title>
+<meta name="theme-color" content="#181818"><meta name="description" content="EK TeX, editor LaTeX lokal yang dikembangkan oleh EK Instrumentation."><title>EK TeX — LaTeX Workspace | EK Instrumentation</title>
 <link rel="icon" type="image/svg+xml" href="/cat-logo.svg">
 <link rel="alternate icon" type="image/png" href="/favicon.png">
 <link rel="stylesheet" href="/styles.css">
@@ -10,15 +10,25 @@
 <link rel="stylesheet" href="/reference-ui.css">
 <link rel="stylesheet" href="/ai-assistant.css">
 <link rel="stylesheet" href="/find-replace.css">
+<link rel="stylesheet" href="/workspace-redesign.css">
 </head>
 <body>
+<a class="skip-to-editor" href="#editor-main">Langsung ke editor</a>
 <div id="app">
 <header class="topbar">
  <div class="brand" aria-label="EK TeX, developed by EK Instrumentation"><div class="brandmark"><img src="/cat-logo.svg" alt="Logo kucing EK Instrumentation" width="40" height="40"></div><div class="brandname">EK <span>TeX</span><small>BY EK INSTRUMENTATION</small></div></div>
  <button class="iconbtn editor-only" id="toggle-sidebar" title="Minimalkan / tampilkan sidebar (Ctrl+B)">☰</button>
  <div class="top-sep editor-only"></div>
- <button class="project-btn editor-only" id="project-picker" title="Kembali ke daftar proyek"><span class="project-symbol">⌁</span><span class="project-name" id="project-name">Memuat...</span><span class="chevron">⌄</span></button>
- <button class="iconbtn top-add editor-only" id="new-project" title="Buat proyek">＋</button>
+ <button class="project-btn editor-only" id="project-picker" title="Kembali ke dashboard proyek"><span class="project-symbol">⌁</span><span class="project-name" id="project-name">Memuat...</span><span class="chevron">⌄</span></button>
+ <div class="project-quick-wrap editor-only">
+ <button class="iconbtn top-add" id="new-project" type="button" aria-haspopup="true" aria-controls="project-quick-menu" aria-expanded="false" title="Buka atau buat proyek" aria-label="Buka menu proyek">＋</button>
+ <div class="project-quick-menu hidden" id="project-quick-menu" role="menu" aria-label="Tindakan proyek">
+  <div class="quick-menu-heading">Workspace</div>
+  <button type="button" id="quick-open-project" role="menuitem"><span class="quick-action-icon">▤</span><span><strong>Buka proyek tersimpan</strong><small>Pindah ke proyek lain</small></span><span class="quick-action-arrow">↗</span></button>
+  <button type="button" id="quick-new-project" role="menuitem"><span class="quick-action-icon">＋</span><span><strong>Buat proyek baru</strong><small>Pilih template LaTeX</small></span><span class="quick-action-arrow">↗</span></button>
+  <button type="button" id="quick-import-project" role="menuitem"><span class="quick-action-icon">⇧</span><span><strong>Impor proyek ZIP</strong><small>Dari komputer Anda</small></span><span class="quick-action-arrow">↗</span></button>
+ </div>
+</div>
  <div class="top-spacer"></div>
  <div class="system-badge" id="compiler-status"><span class="status-dot amber"></span><span>Memeriksa compiler</span></div>
  <button class="btn subtle editor-only" id="export-project" title="Unduh ZIP proyek"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3"/></svg><span>Export ZIP</span></button>
@@ -26,7 +36,7 @@
 </header>
 <section class="dashboard" id="dashboard" aria-label="Daftar proyek LaTeX">
   <div class="dash-shell">
-    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v2.9</div>
+    <div class="dash-eyebrow"><span class="dash-online-dot"></span> LOCAL WORKSPACE <span class="dash-divider">/</span> EK INSTRUMENTATION <span class="dash-divider">/</span> v3.0</div>
     <div class="dash-heading"><div><h1>Proyek LaTeX<span class="dash-period">.</span></h1><p>Pilih dokumen atau mulai proyek baru. Semua pekerjaan disimpan secara lokal.</p><div class="dash-developer"><img src="/cat-logo.svg" alt="" width="23" height="23"><span>Developed by <strong>EK Instrumentation</strong></span></div></div><div class="dash-actions"><button class="btn outline" id="dashboard-settings" title="Pengaturan tema dan tampilan">⚙ Pengaturan</button><button class="btn outline" id="dashboard-references">⌕ Referensi</button><button class="btn outline" id="dashboard-convert">⇄ Konversi dokumen</button><button class="dash-primary" id="dashboard-new">＋ Proyek baru</button></div></div>
     <div class="dash-overview"><div class="dash-stat"><span>PROYEK</span><strong id="dash-count">0</strong><small>tersimpan lokal</small></div><div class="dash-stat"><span>COMPILER</span><strong id="dash-compiler">Checking...</strong><small id="dash-compiler-note">Pemeriksaan awal</small></div><div class="dash-stat dash-stat-side"><span>IMPOR</span><button id="dashboard-import" class="dash-quick">⇧ Proyek ZIP <span>↗</span></button><small>Overleaf atau ZIP lokal</small></div></div>
     <div class="dash-library-head"><div><h2>Proyek saya</h2><span id="dash-subtitle">Semua proyek</span></div><label class="dash-search">⌕ <input id="dashboard-search" type="search" placeholder="Cari nama proyek..." aria-label="Cari proyek"></label></div>
@@ -76,7 +86,7 @@
    </div>
   </section>
  </aside>
- <main class="main">
+ <main class="main" id="editor-main" tabindex="-1">
   <div class="editor-top"><div class="tabs" id="tabs"></div><div class="tab-actions"><button id="toggle-console" class="tab-act" title="Log hasil kompilasi">≡</button></div></div>
   <div class="editor-toolbar"><span class="editor-caption">SOURCE EDITOR</span><span id="dirty-indicator" class="save-indicator">● Saved</span><div class="grow"></div><button class="toolbtn" id="find-code" title="Cari & ganti teks (Ctrl+F / Ctrl+H)">⌕ Find & Replace</button><span class="vline"></span><button class="toolbtn" id="open-reference-search">⌕ Referensi</button><button class="toolbtn" id="insert-cite" title="Sisipkan \cite{...}">❞ Cite</button><button class="toolbtn" id="insert-figure" title="Sisipkan gambar">▧ Figure</button></div>
   <div class="findbar hidden" id="findbar" role="search" aria-label="Cari dan ganti teks file aktif">
@@ -94,7 +104,7 @@
   <div class="preview-footer"><span><i class="footer-dot"></i> Local rendering</span><button id="preview-help">Panduan PDF ↗</button></div>
  </section>
 </div>
-<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v2.9.2</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
+<div class="bottom-bar"><span class="bottom-brand"><span class="bottom-dot"></span> EK TeX <span style="opacity:.6">v3.0</span></span><span class="bottom-hint">Workspace pribadi · 127.0.0.1 · File tersimpan di komputer</span><span class="grow"></span><span class="bottom-developer">Developer: <strong>EK Instrumentation</strong></span><span class="bottom-developer-divider">·</span><span id="toast-inline">Ready</span></div>
 </div>
 <!-- Floating AI chat. Always opens from the lower-right corner of the editor. -->
 <button id="ai-launcher" class="ai-launcher hidden" type="button" aria-label="Buka Asisten AI" aria-controls="ai-drawer" aria-expanded="false"><span class="ai-launcher-icon">✦</span><span>AI Assistant</span></button>
